@@ -129,11 +129,12 @@ const BOT_SKILL = {
 const isPaid = (mode) => mode === "paid" || mode === "challenge";
 
 // Puzzle Challenge: nobody to play in 30s, so the player gets ONE hard puzzle and CHALLENGE_SECONDS to solve it.
-// Solved = the prize (paid by the platform); not solved = the entry stays with the platform. Any puzzle kind
-// except the maze, which is too easy for 100 seconds.
+// Solved = the prize (paid by the platform); not solved = the entry stays with the platform. Left out: the maze
+// (too easy for 100s) and kinds whose level-1 puzzle needs well over 100s.
 const CHALLENGE_SECONDS = 100;
+const NOT_FOR_CHALLENGE = new Set(["maze", "sudoku", "futoshiki", "skyscraper", "crowns", "sunmoon"]);
 async function challengeRound() {
-  const kinds = PUZZLE_KINDS.filter((k) => k !== "maze");
+  const kinds = PUZZLE_KINDS.filter((k) => !NOT_FOR_CHALLENGE.has(k));
   const q = await puzzleRound(kinds[crypto.randomInt(kinds.length)], 1);
   return { ...q, seconds: CHALLENGE_SECONDS };
 }

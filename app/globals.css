@@ -886,3 +886,14 @@ img.site-logo-mark { padding: 0; object-fit: cover; }
   .guide-body { grid-template-columns: 1fr; }
   .guide-example { max-width: 200px; justify-self: center; }
 }
+
+/* Khelein: Quiz banner, same look as the Puzzles banner, with two category artworks */
+.quiz-banner { margin-top: 6px; background: linear-gradient(120deg, rgba(124, 92, 255, 0.4), rgba(24, 226, 155, 0.14) 70%, rgba(13, 11, 38, 0.6)); }
+.qz-art img { width: 104px; height: 104px; object-fit: cover; border-radius: 18px; transform: rotate(-6deg); box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.7); background: #1b1240; }
+.qz-art img + img { transform: rotate(5deg) translateY(10px); }
+@media (max-width: 600px) {
+  .qz-art img { width: 84px; height: 84px; }
+}
+@media (min-width: 1024px) {
+  .qz-art img { width: 130px; height: 130px; }
+}
