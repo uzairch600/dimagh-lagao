@@ -1,0 +1,13 @@
+{
+  "name": "Dimagh Lagao",
+  "short_name": "Dimagh Lagao",
+  "description": "1v1 quiz muqabla — dimagh lagao, inaam jeeto.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a1f",
+  "theme_color": "#0a0a1f",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
