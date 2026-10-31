@@ -51,7 +51,7 @@ const config = () => ({
   questions: game.QUESTIONS_PER_MATCH,
   seconds: game.SECONDS_PER_QUESTION,
   rake: game.RAKE,
-  scoring: { max: game.MAX_POINTS, min: game.MIN_POINTS, fullMs: game.FULL_POINTS_MS },
+  scoring: { max: game.MAX_POINTS, min: game.MIN_POINTS, fullMs: game.FULL_POINTS_SHARE * game.SECONDS_PER_QUESTION * 1000 },
   minWithdraw: MIN_WITHDRAW,
   houseWaitSeconds: game.HOUSE_WAIT_SECONDS,
   avatars: AVATARS,

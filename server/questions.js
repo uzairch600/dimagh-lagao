@@ -4,6 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { PUZZLES_PER_MATCH, puzzleQuestion } from "./puzzles.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
@@ -23,7 +24,14 @@ export const CATEGORIES = [
   { id: "it", name: "IT & Computers", urdu: "کمپیوٹر" },
   { id: "ai", name: "AI", urdu: "مصنوعی ذہانت" },
   { id: "entertainment", name: "Entertainment", urdu: "تفریح" },
+  { id: "puzzle", name: "Logic Puzzle", urdu: "پہیلی" },
 ];
+
+// Categories made on the server without AI (no prefetch, no pool, never repeat).
+const LOCAL = new Set(["math", "puzzle"]);
+
+// Logic puzzles take longer each, so a puzzle match has fewer of them.
+export const questionCount = (category, normal) => (category === "puzzle" ? PUZZLES_PER_MATCH : normal);
 
 // Rotating sub-topics keep AI batches varied instead of 300 versions of the same 20 facts.
 const SUBTOPICS = {
@@ -461,7 +469,7 @@ function produce(category, count) {
 
 // Called when a player joins a queue: start this category's AI run early to hide the wait.
 export function prefetch(category, count) {
-  if (category === "math" || prepared.has(category)) return;
+  if (LOCAL.has(category) || prepared.has(category)) return;
   console.log(`[questions] ${category}: AI run started for the lobby`);
   prepared.set(category, produce(category, count));
 }
@@ -471,6 +479,7 @@ export function prefetch(category, count) {
 // background and its questions stay in the pool for later matches.
 export async function questionsForMatch(category, count, deadlineAt = Infinity) {
   if (category === "math") return Array.from({ length: count }, (_, i) => mathQuestion(i));
+  if (category === "puzzle") return Array.from({ length: count }, (_, i) => puzzleQuestion(i));
   const started = Date.now();
   const run = prepared.get(category) ?? produce(category, count);
   prepared.delete(category);

@@ -66,7 +66,15 @@ export type MatchFound = {
   balance: number;
 };
 
-export type Question = { index: number; total: number; text: string; options: string[]; seconds: number };
+export type Question = {
+  index: number;
+  total: number;
+  text: string;
+  options: string[];
+  seconds: number;
+  clues?: string[]; // logic puzzles only
+  chart?: { rows: string[]; cols: string[] }[]; // logic puzzles only: the notes chart
+};
 
 export type Reveal = {
   index: number;

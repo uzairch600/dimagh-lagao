@@ -232,6 +232,7 @@ export default function GameApp() {
     const prize = entry ? config!.tiers.find((t) => t.entry === entry)?.prize ?? 0 : 0;
     setSheet(
       <RulesSheet
+        categoryId={category.id}
         categoryName={category.name}
         entry={entry}
         prize={prize}

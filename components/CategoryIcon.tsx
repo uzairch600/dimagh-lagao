@@ -1,4 +1,4 @@
-import { Clapperboard, Cpu, HelpCircle, Sparkles, type LucideIcon } from "lucide-react";
+import { Clapperboard, Cpu, HelpCircle, Puzzle, Sparkles, type LucideIcon } from "lucide-react";
 
 // 3D mascot artwork for each quiz category (public/images/cat-*.webp).
 // Categories without artwork yet fall back to an icon on the same tile.
@@ -7,6 +7,7 @@ const FALLBACK: Record<string, { icon: LucideIcon; color: string }> = {
   it: { icon: Cpu, color: "#5fd3ff" },
   ai: { icon: Sparkles, color: "#b79bff" },
   entertainment: { icon: Clapperboard, color: "#ff6fb8" },
+  puzzle: { icon: Puzzle, color: "#ffd36e" },
 };
 
 type Props = { id: string; name?: string; className?: string };

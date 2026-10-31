@@ -6,6 +6,7 @@ import { sfx } from "@/lib/sound";
 import type { MatchState } from "../GameApp";
 import Avatar from "../Avatar";
 import CanvasText from "../CanvasText";
+import NotesChart, { Clues } from "../PuzzleBoard";
 
 const KEYS = ["A", "B", "C", "D"];
 const isMath = (t: string) => /^[\d\s+−×÷=?]+$/.test(t);
@@ -33,6 +34,7 @@ export default function Match({ state, onAnswer }: { state: MatchState; onAnswer
 
   const low = left <= 3 && !reveal;
   const myPoints = reveal?.you.points ?? 0;
+  const puzzle = !!q?.clues?.length;
 
   return (
     <section className="screen no-select">
@@ -81,21 +83,24 @@ export default function Match({ state, onAnswer }: { state: MatchState; onAnswer
         </div>
       ) : (
         <>
-          <div className="q-card card glass" key={q.index}>
+          <div className={`q-card card glass ${puzzle ? "puzzle-card" : ""}`} key={q.index}>
             <p className="q-count">
-              Sawal {q.index + 1}/{q.total}
+              {puzzle ? "Puzzle" : "Sawal"} {q.index + 1}/{q.total}
             </p>
+            {puzzle && <Clues clues={q.clues!} wide={wide} />}
             {/* drawn on a canvas so it can't be copied or read by page tools */}
             <div className="q-text">
               {isMath(q.text) ? (
                 <CanvasText text={q.text} size={40} weight={800} align="center" />
               ) : (
-                <CanvasText text={q.text} size={wide ? 26 : 21} align="center" />
+                <CanvasText text={q.text} size={puzzle ? (wide ? 22 : 18) : wide ? 26 : 21} align="center" />
               )}
             </div>
           </div>
 
-          <div className="options" key={`o${q.index}`}>
+          {puzzle && q.chart && <NotesChart key={`n${q.index}`} charts={q.chart} />}
+
+          <div className={`options ${puzzle ? "puzzle-opts" : ""}`} key={`o${q.index}`}>
             {q.options.map((opt, i) => {
               let cls = "option";
               if (reveal) {

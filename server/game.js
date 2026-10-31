@@ -2,19 +2,21 @@
 // clients never see the correct answer until both players have answered (or time runs out).
 import crypto from "node:crypto";
 import * as db from "./db.js";
-import { CATEGORIES, prefetch, questionsForMatch } from "./questions.js";
+import { CATEGORIES, prefetch, questionCount, questionsForMatch } from "./questions.js";
 
 export const QUESTIONS_PER_MATCH = 10;
 // 10s: enough to read a hard question and four options on a phone, too short to ask an AI on a second
 // phone and still score well (that takes 8-10s, which speed scoring turns into ~10-20 points).
 export const SECONDS_PER_QUESTION = 10;
 export const RAKE = 0.3; // platform share of the pot; the winner gets the other 70%
-// Speed scoring: a right answer within FULL_POINTS_MS earns MAX_POINTS, then falls linearly to
-// MIN_POINTS at the last second. A wrong answer earns 0.
+// Speed scoring: a right answer within the first FULL_POINTS_SHARE of the time earns MAX_POINTS (2s of a 10s
+// question), then falls linearly to MIN_POINTS at the last second. A wrong answer earns 0.
 export const MAX_POINTS = 100;
 export const MIN_POINTS = 10;
-export const FULL_POINTS_MS = 2000;
-const LATE_MS = 6000; // a right answer after this counts as "late" for the prize review
+export const FULL_POINTS_SHARE = 0.2;
+const LATE_SHARE = 0.6; // a right answer after 60% of the time (6s of 10s) counts as "late" for the prize review
+// Most questions get SECONDS_PER_QUESTION; logic puzzles carry their own time, set by how hard they are.
+const secondsFor = (q) => q.seconds ?? SECONDS_PER_QUESTION;
 export const ENTRY_TIERS = [20, 50, 100, 500];
 const GRACE_MS = 600; // network allowance on the answer deadline
 const REVEAL_MS = 1800;
@@ -147,14 +149,15 @@ function startMatch({ mode, category, entry, a, b, since = Date.now() }) {
   // other players still waiting in this category get their own research started
   if (categoryWaiting(category)) prefetch(category, QUESTIONS_PER_MATCH);
 
-  questionsForMatch(category, QUESTIONS_PER_MATCH, since + LOBBY_MAX_MS)
+  const want = questionCount(category, QUESTIONS_PER_MATCH);
+  questionsForMatch(category, want, since + LOBBY_MAX_MS)
     .catch((err) => {
       console.error("[game] could not prepare questions:", err);
       return [];
     })
     .then((questions) => {
       if (m.done) return;
-      if (questions.length < QUESTIONS_PER_MATCH) return cancelMatch(m, "Abhi match shuru nahi ho saka — entry wapas kar di gayi");
+      if (questions.length < want) return cancelMatch(m, "Abhi match shuru nahi ho saka — entry wapas kar di gayi");
       m.questions = questions;
       m.phase = "countdown";
       for (const p of humans(m)) sendFound(m, p);
@@ -166,7 +169,7 @@ function sendFound(m, p, resumed = false) {
   const opp = m.players.find((x) => x !== p);
   p.socket?.emit("match:found", {
     matchId: m.id, mode: m.mode, category: categoryName(m.category), entry: m.entry, prize: m.prize,
-    total: QUESTIONS_PER_MATCH, seconds: SECONDS_PER_QUESTION, resumed,
+    total: m.questions.length || QUESTIONS_PER_MATCH, seconds: SECONDS_PER_QUESTION, resumed,
     you: { name: p.name, avatar: p.avatar, score: p.score },
     opponent: { name: opp.name, avatar: opp.avatar, bot: opp.bot, score: opp.score },
     balance: db.getUser(p.userId).balance,
@@ -192,10 +195,11 @@ function cancelMatch(m, reason) {
 }
 
 // Each player gets the options in their own random order, so two players can't compare "option B".
-function sendQuestion(m, p, secondsLeft = SECONDS_PER_QUESTION) {
+function sendQuestion(m, p, secondsLeft) {
   const q = m.questions[m.index];
   p.socket?.emit("match:question", {
-    index: m.index, total: m.questions.length, text: q.text, options: p.perm.map((i) => q.options[i]), seconds: secondsLeft,
+    index: m.index, total: m.questions.length, text: q.text, options: p.perm.map((i) => q.options[i]),
+    seconds: secondsLeft ?? secondsFor(q), clues: q.clues, chart: q.chart,
   });
 }
 
@@ -209,13 +213,15 @@ function ask(m) {
     sendQuestion(m, p);
   }
   for (const p of m.players) if (p.bot) scheduleBot(m, p);
-  m.timer = setTimeout(() => reveal(m), SECONDS_PER_QUESTION * 1000 + GRACE_MS);
+  m.timer = setTimeout(() => reveal(m), secondsFor(m.questions[m.index]) * 1000 + GRACE_MS);
 }
 
 function scheduleBot(m, bot) {
   const index = m.index;
   const skill = BOT_SKILL[m.mode] ?? BOT_SKILL.practice;
-  const delay = skill.minMs + Math.random() * (skill.maxMs - skill.minMs);
+  // bot timings are tuned for a 10s question; longer puzzles stretch them
+  const scale = secondsFor(m.questions[index]) / SECONDS_PER_QUESTION;
+  const delay = (skill.minMs + Math.random() * (skill.maxMs - skill.minMs)) * scale;
   setTimeout(() => {
     if (m.done || m.index !== index) return;
     const q = m.questions[index];
@@ -238,21 +244,21 @@ export function answer(userId, { matchId, index, choice }) {
 function record(m, p, index, choice) {
   if (m.phase !== "question" || index !== m.index || p.answers[index]) return;
   const elapsed = Date.now() - m.askedAt;
-  const limit = SECONDS_PER_QUESTION * 1000;
+  const limit = secondsFor(m.questions[index]) * 1000;
   if (elapsed > limit + GRACE_MS) return;
   const correct = choice === m.questions[index].answerIndex;
-  const points = correct ? speedPoints(elapsed) : 0;
-  p.answers[index] = { choice, correct, points, ms: elapsed };
+  const points = correct ? speedPoints(elapsed, limit) : 0;
+  p.answers[index] = { choice, correct, points, ms: elapsed, limit };
   p.score += points;
   if (correct) p.correct++;
   for (const other of m.players) if (other !== p) other.socket?.emit("match:opponentAnswered", { index });
   revealIfDone(m);
 }
 
-export function speedPoints(ms) {
-  const limit = SECONDS_PER_QUESTION * 1000;
-  if (ms <= FULL_POINTS_MS) return MAX_POINTS;
-  const t = Math.min(1, (ms - FULL_POINTS_MS) / (limit - FULL_POINTS_MS));
+export function speedPoints(ms, limit = SECONDS_PER_QUESTION * 1000) {
+  const full = limit * FULL_POINTS_SHARE;
+  if (ms <= full) return MAX_POINTS;
+  const t = Math.min(1, (ms - full) / (limit - full));
   return Math.round(MAX_POINTS - (MAX_POINTS - MIN_POINTS) * t);
 }
 
@@ -405,7 +411,7 @@ export function rejoin(userId, socket) {
   for (const other of humans(m)) if (other !== p) other.socket?.emit("match:opponentBack");
   sendFound(m, p, true);
   if (m.phase === "question" && !p.answers[m.index]) {
-    const left = Math.max(1, Math.ceil(SECONDS_PER_QUESTION - (Date.now() - m.askedAt) / 1000));
+    const left = Math.max(1, Math.ceil(secondsFor(m.questions[m.index]) - (Date.now() - m.askedAt) / 1000));
     sendQuestion(m, p, left);
   }
   return true;
@@ -448,9 +454,9 @@ function checkPatterns(m, p) {
   const correct = answered.filter((a) => a.correct);
   const reasons = [];
   // nearly all right while nearly always answering late = looking answers up somewhere else
-  const late = correct.filter((a) => a.ms > LATE_MS).length;
+  const late = correct.filter((a) => a.ms > LATE_SHARE * (a.limit ?? SECONDS_PER_QUESTION * 1000)).length;
   if (correct.length >= 8 && late >= 0.75 * correct.length)
-    reasons.push({ hold: true, reason: `late-correct: ${correct.length}/${answered.length} right, ${late} of them after ${LATE_MS / 1000}s` });
+    reasons.push({ hold: true, reason: `late-correct: ${correct.length}/${answered.length} right, ${late} of them in the last ${Math.round((1 - LATE_SHARE) * 100)}% of the time` });
   const sd = stdev(times);
   if (sd < 250) reasons.push({ hold: true, reason: `uniform-timing: answer times vary by only ${Math.round(sd)}ms` });
   const fast = correct.filter((a) => a.ms < 1500).length;

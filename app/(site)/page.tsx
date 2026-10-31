@@ -12,6 +12,7 @@ const CATEGORIES = [
   { id: "it", name: "IT & Computers", desc: "Computer, internet, coding" },
   { id: "ai", name: "AI", desc: "Machine learning, robots" },
   { id: "entertainment", name: "Entertainment", desc: "Films, dramas, music" },
+  { id: "puzzle", name: "Logic Puzzle", desc: "Janwar, ghar aur suragh" },
 ];
 
 const STEPS = [
@@ -44,7 +45,7 @@ export default function Landing() {
               <span className="grad-gold">inaam jeeto.</span>
             </h1>
             <p className="lead">
-              Asli players ke saath live quiz battle. Pakistan aur duniya ki GK, cricket, science, IT, AI aur entertainment — jo sahi aur sab se tez jawab de,
+              Asli players ke saath live quiz battle. Pakistan aur duniya ki GK, cricket, science, IT, AI, entertainment aur logic puzzles — jo sahi aur sab se tez jawab de,
               wohi jeete. <b>Rs 700 tak</b> ek match mein.
             </p>
             <div className="hero-ctas">

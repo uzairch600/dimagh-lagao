@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { DoorClosed, Eye, Gauge, ShieldAlert, Timer, Wifi } from "lucide-react";
+import PuzzleGuide from "./PuzzleGuide";
 import { rs } from "@/lib/api";
 import type { Config } from "@/lib/types";
 
 type Props = {
+  categoryId: string;
   categoryName: string;
   entry: number | null; // null = free practice
   prize: number;
@@ -17,21 +19,30 @@ type Props = {
 };
 
 // Shown before every match. The player must agree before they can start.
-export default function RulesSheet({ categoryName, entry, prize, seconds, rake, scoring, onStart, onBack }: Props) {
+export default function RulesSheet({ categoryId, categoryName, entry, prize, seconds, rake, scoring, onStart, onBack }: Props) {
   const [agree, setAgree] = useState(false);
   const fullSecs = scoring.fullMs / 1000;
+  const puzzle = categoryId === "puzzle";
   const rules = [
     {
       icon: DoorClosed,
       ur: entry ? `Start dabane ke baad wapsi nahi. Lobby ya match chhora to ${rs(entry)} entry wapas nahi milegi aur muqabil jeet jayega.` : "Start dabane ke baad wapsi nahi. Match chhora to aap haar jayenge.",
       en: entry ? "No leaving after Start. Leave the lobby or match and you lose the entry; the opponent wins." : "No leaving after Start. Leaving counts as a loss.",
     },
-    { icon: Timer, ur: `Har sawal ke liye sirf ${seconds} second.`, en: `${seconds} seconds per question.` },
-    {
-      icon: Gauge,
-      ur: `Jitna tez sahi jawab, utne zyada points: ${fullSecs} second tak ${scoring.max}, phir kam hote hote aakhri second par ${scoring.min}. Ghalat jawab = 0.`,
-      en: `Faster right answers score more: ${scoring.max} points up to ${fullSecs}s, falling to ${scoring.min} at the last second. Wrong = 0.`,
-    },
+    puzzle
+      ? { icon: Timer, ur: "5 puzzles. Har puzzle ka apna waqt hai — jitna mushkil, utna zyada (20 se 75 second). Waqt screen par dikhta hai.", en: "5 puzzles. Each has its own time based on how hard it is (20-75 seconds)." }
+      : { icon: Timer, ur: `Har sawal ke liye sirf ${seconds} second.`, en: `${seconds} seconds per question.` },
+    puzzle
+      ? {
+          icon: Gauge,
+          ur: `Pehle 20% waqt mein sahi jawab = ${scoring.max} points, phir kam hote hote aakhri second par ${scoring.min}. Ghalat jawab = 0.`,
+          en: `A right answer in the first 20% of the time scores ${scoring.max}, falling to ${scoring.min} at the last second. Wrong = 0.`,
+        }
+      : {
+          icon: Gauge,
+          ur: `Jitna tez sahi jawab, utne zyada points: ${fullSecs} second tak ${scoring.max}, phir kam hote hote aakhri second par ${scoring.min}. Ghalat jawab = 0.`,
+          en: `Faster right answers score more: ${scoring.max} points up to ${fullSecs}s, falling to ${scoring.min} at the last second. Wrong = 0.`,
+        },
     {
       icon: Eye,
       ur: "Tab ya window badalna, full screen se nikalna, devtools kholna ya extensions chalana cheating hai.",
@@ -60,6 +71,7 @@ export default function RulesSheet({ categoryName, entry, prize, seconds, rake, 
           <div className="fee-win"><span>Jeetne wale ko ({Math.round((1 - rake) * 100)}%)</span><b>{rs(prize)}</b></div>
         </div>
       ) : null}
+      {puzzle && <PuzzleGuide />}
       <div className="rules">
         {rules.map(({ icon: Icon, ur, en }) => (
           <div key={en} className="rule">

@@ -12,6 +12,7 @@ const BLURB: Record<string, string> = {
   it: "Computer aur internet",
   ai: "Robots aur machine learning",
   entertainment: "Films, dramas, music",
+  puzzle: "Janwar, ghar aur suragh — dimagh lagao",
 };
 
 // "Khelein": just the categories.
