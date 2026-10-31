@@ -9,6 +9,7 @@ import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { DATA_DIR } from "./db.js";
 import { SEED } from "./seed-questions.js";
+import * as store from "./store.js";
 
 const MODEL = "claude-haiku-5-5";
 const POOL_FILE = path.join(DATA_DIR, "questions.json");
@@ -62,8 +63,8 @@ const SUBTOPICS = {
 // Extra rules per category on top of the general rules (accuracy-sensitive topics).
 const CATEGORY_RULES = {
   entertainment: "Only well-known, long-settled facts about films, books, music and games. Nothing about celebrities' personal lives, relationships, religion or politics.",
-  ai: "Only established, textbook facts. Never ask about the newest models, companies' current products, or anything after 2022.",
-  it: "Only established facts. Never ask about prices, latest versions or current market share.",
+  ai: "Mix AI history, core concepts (algorithms, architectures, training) and dated milestones; pin anything recent to its year. No opinions or predictions.",
+  it: "Technical questions are welcome (protocols, ports, standards, data structures, hardware specs); pin anything recent to its year. No prices or market share.",
 };
 
 const client = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
@@ -94,14 +95,33 @@ for (const [cat, items] of Object.entries(SEED)) {
     if (!have.has(norm(q))) pool[cat].push({ id: hashId(cat, q), q, correct, wrong, difficulty: "easy", source: "seed" });
   }
 }
+if (store.enabled) {
+  const remote = await store.loadQuestions();
+  if (Object.keys(remote).length === 0) {
+    for (const [cat, items] of Object.entries(pool)) await store.saveQuestions(cat, items);
+    console.log("[questions] copied local question pool into Supabase");
+  } else {
+    for (const [cat, items] of Object.entries(remote)) {
+      const have = new Set((pool[cat] ||= []).map((x) => x.id));
+      for (const q of items) if (!have.has(q.id)) pool[cat].push(q);
+    }
+  }
+}
 savePool();
 
-function savePool() {
+function savePool(category, added) {
   fs.writeFileSync(POOL_FILE, JSON.stringify(pool, null, 2));
+  if (store.enabled && category && added?.length) {
+    store.saveQuestions(category, added).catch((err) => console.error("[questions] saving to Supabase failed:", err.message));
+  }
 }
 
+// Only the new web-researched, hard questions count towards the target, so older easy ones get topped up.
+const isHard = (q) => q.v === 2;
+const hardCount = (category) => (pool[category] || []).filter(isHard).length;
+
 export function poolStats() {
-  return Object.fromEntries(Object.entries(pool).map(([k, v]) => [k, v.length]));
+  return Object.fromEntries(Object.entries(pool).map(([k, v]) => [k, `${v.length} (${v.filter(isHard).length} hard)`]));
 }
 
 // ---------- picking questions for a match ----------
@@ -152,7 +172,8 @@ export function pickQuestions(category, count, seenSets = []) {
   if (category === "math") return Array.from({ length: count }, (_, i) => mathQuestion(i));
   const items = pool[category] || [];
   const fresh = items.filter((x) => !seenSets.some((s) => s.has(x.id)));
-  const chosen = shuffle(fresh).slice(0, count);
+  // hard, web-researched questions first; older ones only fill the gaps
+  const chosen = [...shuffle(fresh.filter(isHard)), ...shuffle(fresh.filter((x) => !isHard(x)))].slice(0, count);
   if (chosen.length < count) {
     const ids = new Set(chosen.map((x) => x.id));
     chosen.push(...shuffle(items.filter((x) => !ids.has(x.id))).slice(0, count - chosen.length));
@@ -178,21 +199,53 @@ const VerdictSchema = z.object({
   verdicts: z.array(z.object({ number: z.number().int(), ok: z.boolean() })),
 });
 
-const GEN_SYSTEM = `You write multiple-choice quiz questions for a Pakistani quiz-battle app where players compete for prizes, so accuracy matters more than anything.
+const GEN_SYSTEM = `You write HARD multiple-choice quiz questions for a Pakistani 1v1 quiz-battle app where players compete for prizes, so accuracy matters more than anything.
 Rules:
-- Only use facts you are certain about and that do not change over time. Never ask about "current" office holders, latest records, recent rankings, or anything after 2023.
-- Exactly one answer is correct; the three wrong answers must be clearly wrong but plausible.
-- Keep questions short (under 20 words) and in simple English that a Pakistani student would understand.
-- Answers should be short (1-5 words).
-- Mix difficulty: about 40% easy, 40% medium, 20% hard.
-- Nothing religiously, politically or ethnically controversial.`;
+- Build every question ONLY on the researched facts you are given. Never invent a fact.
+- Difficulty: about 70% hard, 30% medium, no easy questions. Aim at enthusiasts and experts: specific years, numbers, records, names, technical details — not famous trivia everyone knows.
+- Each question must still be answerable in under 10 seconds by someone who knows the topic: short question (under 22 words), short answers (1-5 words), no trick wording.
+- Exactly one answer is correct; the three wrong answers must be plausible (same type, similar range) but definitely wrong.
+- If a fact can change over time, put the date or season in the question (e.g. "In the 2024 T20 World Cup final, ..."). Never use words like "current", "latest", "now" or "recently".
+- Simple English a Pakistani student understands.
+- Nothing religiously, politically or ethnically controversial; nothing about celebrities' private lives.`;
 
-const VERIFY_SYSTEM = `You are a strict fact-checker for a quiz app with money prizes. For each question, set ok=true only if ALL of these hold:
-- the marked correct answer is definitely correct,
+const VERIFY_SYSTEM = `You are a strict fact-checker for a quiz app with money prizes. You get researched facts and a list of questions. For each question, set ok=true only if ALL of these hold:
+- the marked correct answer is directly supported by the researched facts (or is a fact you are completely certain of),
 - none of the wrong answers could also be considered correct,
-- the question is unambiguous and not time-sensitive,
+- the question is unambiguous, and any time-sensitive fact is pinned to a date or season in the question,
 - it is not religiously, politically or ethnically controversial.
 When in doubt, set ok=false.`;
+
+const RESEARCH_SYSTEM = `You are a research assistant for a quiz writer. Use web search to collect accurate, verifiable facts. Prefer authoritative sources (official bodies, encyclopedias, reputable news). Report only facts you found in sources.`;
+
+// Step 1: web research. Returns a bullet list of dated, sourced facts for the topic.
+async function research(catName, topic) {
+  const messages = [{
+    role: "user",
+    content: `Topic: ${catName} — ${topic}.
+Search the web and collect 35 precise facts that would make HARD quiz questions for enthusiasts: exact years, numbers, records, names, technical details, lesser-known but well documented facts.
+Cover at least 12 DIFFERENT subjects within the topic (no more than 3 facts about any single person, place, team, film or thing), and include Pakistan-related subjects where they fit.
+For anything that can change over time, include the date or season in the fact.
+Return only a plain bullet list, one fact per line, each ending with the source site name in brackets.`,
+  }];
+  for (let turn = 0; turn < 4; turn++) {
+    const res = await client.messages.create({
+      model: MODEL,
+      max_tokens: 16000,
+      system: RESEARCH_SYSTEM,
+      output_config: { effort: "medium" },
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 4 }],
+      messages,
+    });
+    if (res.stop_reason === "pause_turn") {
+      messages.push({ role: "assistant", content: res.content });
+      continue;
+    }
+    if (res.stop_reason !== "end_turn") return "";
+    return res.content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+  }
+  return "";
+}
 
 const generating = new Set();
 const topicCursor = {};
@@ -204,6 +257,12 @@ async function generateBatch(category) {
   const catName = CATEGORIES.find((c) => c.id === category).name;
   const existing = shuffle(pool[category]).slice(0, 60).map((x) => "- " + x.q).join("\n");
 
+  const facts = await research(catName, topic);
+  if (facts.length < 200) {
+    console.warn(`[questions] research for ${category}/${topic} came back empty, skipping`);
+    return 0;
+  }
+
   const gen = await client.messages.parse({
     model: MODEL,
     max_tokens: 16000,
@@ -211,7 +270,14 @@ async function generateBatch(category) {
     system: GEN_SYSTEM,
     messages: [{
       role: "user",
-      content: `Category: ${catName}\nFocus topic: ${topic}\n${CATEGORY_RULES[category] ? `Extra rules: ${CATEGORY_RULES[category]}\n` : ""}Write ${BATCH_SIZE} new questions with exactly 3 wrong answers each.\n\nDo not repeat or rephrase these existing questions:\n${existing}`,
+      content: `Category: ${catName}\nFocus topic: ${topic}\n${CATEGORY_RULES[category] ? `Extra rules: ${CATEGORY_RULES[category]}\n` : ""}
+RESEARCHED FACTS:
+${facts}
+
+Write ${BATCH_SIZE} new questions based only on these facts, with exactly 3 wrong answers each.
+
+Do not repeat or rephrase these existing questions:
+${existing}`,
     }],
   });
   if (gen.stop_reason !== "end_turn" || !gen.parsed_output) {
@@ -234,7 +300,7 @@ async function generateBatch(category) {
     max_tokens: 8000,
     output_config: { effort: "high", format: zodOutputFormat(VerdictSchema) },
     system: VERIFY_SYSTEM,
-    messages: [{ role: "user", content: `Check these ${candidates.length} questions:\n\n${listing}` }],
+    messages: [{ role: "user", content: `RESEARCHED FACTS:\n${facts}\n\nCheck these ${candidates.length} questions:\n\n${listing}` }],
   });
   if (check.stop_reason !== "end_turn" || !check.parsed_output) {
     console.warn(`[questions] verification for ${category} stopped: ${check.stop_reason}`);
@@ -242,27 +308,28 @@ async function generateBatch(category) {
   }
 
   const okNumbers = new Set(check.parsed_output.verdicts.filter((v) => v.ok).map((v) => v.number));
-  let added = 0;
+  const added = [];
   candidates.forEach((q, i) => {
     if (!okNumbers.has(i + 1)) return;
     const id = hashId(category, q.question);
     if (have.has(id)) return;
     have.add(id);
-    pool[category].push({ id, q: q.question, correct: q.correct_answer, wrong: q.wrong_answers, difficulty: q.difficulty, source: "ai", topic });
-    added++;
+    const item = { id, q: q.question, correct: q.correct_answer, wrong: q.wrong_answers, difficulty: q.difficulty, source: "ai-web", topic, v: 2, at: Date.now() };
+    pool[category].push(item);
+    added.push(item);
   });
-  savePool();
-  console.log(`[questions] ${category}/${topic}: +${added} (${candidates.length - added} rejected by fact-check), pool=${pool[category].length}`);
-  return added;
+  savePool(category, added);
+  console.log(`[questions] ${category}/${topic}: +${added.length} hard (${candidates.length - added.length} rejected by fact-check), hard pool=${hardCount(category)}`);
+  return added.length;
 }
 
 export async function ensurePool(category) {
   if (aiDisabledReason || category === "math" || generating.has(category)) return;
-  if ((pool[category]?.length || 0) >= TARGET_POOL_SIZE) return;
+  if (hardCount(category) >= TARGET_POOL_SIZE) return;
   generating.add(category);
   try {
     let stalls = 0;
-    while (pool[category].length < TARGET_POOL_SIZE && stalls < 3) {
+    while (hardCount(category) < TARGET_POOL_SIZE && stalls < 3) {
       const added = await generateBatch(category);
       stalls = added ? 0 : stalls + 1;
     }
