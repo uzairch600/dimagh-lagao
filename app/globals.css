@@ -55,19 +55,49 @@ input { font: inherit; color: inherit; }
 /* ---------- primitives ---------- */
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
 .glass { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+/* Buttons: every variant sets its own text colour so <a class="btn"> never falls back to link blue. */
 .btn {
+  position: relative; overflow: hidden; isolation: isolate;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 14px 22px; border-radius: 16px; font-weight: 700; font-size: 15px;
-  transition: transform 0.12s, filter 0.2s, opacity 0.2s;
+  padding: 14px 24px; border-radius: 16px; border: 1px solid transparent;
+  font-weight: 700; font-size: 15px; letter-spacing: 0.01em; line-height: 1.2;
+  color: var(--text); text-decoration: none; white-space: nowrap; cursor: pointer;
+  transition: transform 0.2s cubic-bezier(.2,.8,.2,1), box-shadow 0.25s, background 0.25s, border-color 0.25s, opacity 0.2s;
 }
-.btn:active { transform: scale(0.96); }
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(0) scale(0.97); }
+.btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .btn:disabled { opacity: 0.5; pointer-events: none; }
 .btn-block { width: 100%; }
-.btn-primary { background: linear-gradient(135deg, var(--purple), #b04bff); box-shadow: 0 10px 30px -8px rgba(124, 92, 255, 0.7); }
-.btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-2)); color: #2a1600; box-shadow: 0 10px 30px -8px rgba(255, 159, 67, 0.7); }
-.btn-ghost { background: var(--card); border: 1px solid var(--line); }
-.btn-light { background: #fff; color: #21134d; }
-.btn-outline-light { border: 1.5px solid rgba(255, 255, 255, 0.6); }
+/* glossy sweep on the filled buttons */
+.btn-primary::after, .btn-gold::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%);
+  transform: translateX(-120%); transition: transform 0.7s ease;
+}
+.btn-primary:hover::after, .btn-gold:hover::after { transform: translateX(120%); }
+.btn-primary {
+  color: #fff; background: linear-gradient(135deg, #9a7dff 0%, #6b3dff 45%, #b04bff 100%);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 12px 32px -10px rgba(124, 92, 255, 0.85);
+}
+.btn-primary:hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 18px 44px -10px rgba(140, 100, 255, 1); }
+.btn-gold {
+  color: #2a1600; background: linear-gradient(135deg, #fff0b8 0%, #ffd36e 30%, #ffad45 70%, #ff8a3d 100%);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 -2px 0 rgba(160, 70, 0, 0.25), 0 12px 32px -10px rgba(255, 159, 67, 0.85);
+}
+.btn-gold:hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -2px 0 rgba(160, 70, 0, 0.25), 0 18px 44px -10px rgba(255, 170, 70, 1); }
+.btn-ghost {
+  color: var(--text); background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.28); }
+.btn-light { color: #21134d; background: #fff; box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.5); }
+.btn-outline-light { color: #fff; border: 1.5px solid rgba(255, 255, 255, 0.6); }
+.btn-outline-light:hover { background: rgba(255, 255, 255, 0.12); }
+@media (prefers-reduced-motion: reduce) { .btn:hover { transform: none; } }
 
 .avatar {
   display: inline-grid; place-items: center; position: relative; flex-shrink: 0;
