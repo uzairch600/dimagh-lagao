@@ -3,7 +3,8 @@
 // Format: [question, correct answer, [3 wrong answers]]
 
 export const SEED = {
-  pakistan: [
+  // Pakistan questions now live in World GK.
+  worldExtra: [
     ["What is the national language of Pakistan?", "Urdu", ["Punjabi", "English", "Sindhi"]],
     ["What is the capital of Pakistan?", "Islamabad", ["Karachi", "Lahore", "Rawalpindi"]],
     ["In which year did Pakistan gain independence?", "1947", ["1945", "1948", "1950"]],
@@ -67,4 +68,29 @@ export const SEED = {
     ["Which vitamin does the body make from sunlight?", "Vitamin D", ["Vitamin A", "Vitamin C", "Vitamin B12"]],
     ["Who proposed the theory of relativity?", "Albert Einstein", ["Isaac Newton", "Galileo Galilei", "Stephen Hawking"]],
   ],
+  it: [
+    ["What does HTTP stand for?", "HyperText Transfer Protocol", ["HyperText Transmission Process", "High Transfer Text Protocol", "Hyperlink Text Transfer Program"]],
+    ["Which company created the Windows operating system?", "Microsoft", ["Apple", "Google", "IBM"]],
+    ["What does RAM stand for?", "Random Access Memory", ["Read Access Memory", "Rapid Action Memory", "Random Allocation Module"]],
+    ["How many bits are in one byte?", "8", ["4", "16", "10"]],
+    ["Which language is mainly used to style web pages?", "CSS", ["Python", "SQL", "C++"]],
+  ],
+  ai: [
+    ["Who proposed the famous \"Turing Test\" for machine intelligence?", "Alan Turing", ["Charles Babbage", "John McCarthy", "Ada Lovelace"]],
+    ["Which IBM computer beat chess champion Garry Kasparov in 1997?", "Deep Blue", ["Watson", "AlphaZero", "Stockfish"]],
+    ["Which AI program beat Go champion Lee Sedol in 2016?", "AlphaGo", ["Deep Blue", "Watson", "Siri"]],
+    ["What does AI stand for?", "Artificial Intelligence", ["Automated Internet", "Advanced Information", "Artificial Interface"]],
+    ["In machine learning, the data used to teach a model is called what?", "Training data", ["Output data", "Final data", "Cache data"]],
+  ],
+  entertainment: [
+    ["Which animated film features a clownfish named Nemo?", "Finding Nemo", ["Shark Tale", "The Little Mermaid", "Moana"]],
+    ["Which superhero is known as the \"Man of Steel\"?", "Superman", ["Batman", "Iron Man", "Spider-Man"]],
+    ["Who wrote the Harry Potter books?", "J.K. Rowling", ["J.R.R. Tolkien", "Roald Dahl", "C.S. Lewis"]],
+    ["How many keys does a standard piano have?", "88", ["76", "64", "92"]],
+    ["Which 1995 animated film features Woody and Buzz Lightyear?", "Toy Story", ["Cars", "Shrek", "Up"]],
+  ],
 };
+
+// World GK = former Pakistan GK seeds + the original world seeds.
+SEED.world = [...SEED.world, ...SEED.worldExtra];
+delete SEED.worldExtra;

@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { ArrowRight, Bot, Clock, Lock, ShieldCheck, Smartphone, Swords, Trophy, Users, Wallet } from "lucide-react";
 import { LiveStrip, WinnersList } from "@/components/site/Live";
+import CategoryIcon from "@/components/CategoryIcon";
 import { SITE } from "@/lib/site";
 
 const CATEGORIES = [
-  { id: "pakistan", name: "Pakistan GK", desc: "Tareekh, jughrafia, culture" },
+  { id: "world", name: "World GK", desc: "Pakistan aur duniya" },
   { id: "cricket", name: "Cricket", desc: "Records, legends, rules" },
-  { id: "world", name: "Duniya GK", desc: "Capitals, history, duniya" },
   { id: "science", name: "Science", desc: "Jism, space, technology" },
-  { id: "math", name: "Math Speed", desc: "Tez hisaab — sab se fast jeete" },
+  { id: "math", name: "Math Speed", desc: "Sab se tez hisaab" },
+  { id: "it", name: "IT & Computers", desc: "Computer, internet, coding" },
+  { id: "ai", name: "AI", desc: "Machine learning, robots" },
+  { id: "entertainment", name: "Entertainment", desc: "Films, dramas, music" },
 ];
 
 const STEPS = [
@@ -41,7 +44,7 @@ export default function Landing() {
               <span className="grad-gold">inaam jeeto.</span>
             </h1>
             <p className="lead">
-              Asli players ke saath live quiz battle. Pakistan GK, cricket, science aur math — jo sahi aur sab se tez jawab de,
+              Asli players ke saath live quiz battle. Pakistan aur duniya ki GK, cricket, science, IT, AI aur entertainment — jo sahi aur sab se tez jawab de,
               wohi jeete. <b>Rs 900 tak</b> ek match mein.
             </p>
             <div className="hero-ctas">
@@ -82,10 +85,10 @@ export default function Landing() {
             <h2>4 qadam, aur aap muqable mein</h2>
           </div>
           <div className="steps">
-            {STEPS.map(({ icon: Icon, title, text }, i) => (
+            {STEPS.map(({ title, text }, i) => (
               <div key={title} className="step">
                 <span className="step-num">{i + 1}</span>
-                <span className="step-icon"><Icon size={26} /></span>
+                <img className="step-art" src={`/images/step-${i + 1}.webp`} alt="" width={480} height={480} loading="lazy" />
                 <h3>{title}</h3>
                 <p>{text}</p>
               </div>
@@ -104,7 +107,7 @@ export default function Landing() {
           <div className="cat-cards">
             {CATEGORIES.map(({ id, name, desc }) => (
               <Link href="/play" key={id} className="cat-card">
-                <img className="cat-card-art" src={`/images/cat-${id}.webp`} alt="" width={480} height={480} loading="lazy" />
+                <CategoryIcon id={id} className="cat-card-art" />
                 <h3>{name}</h3>
                 <p>{desc}</p>
                 <span className="cat-link">Khelein <ArrowRight size={16} /></span>

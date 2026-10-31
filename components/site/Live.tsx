@@ -17,7 +17,8 @@ type Live = {
 };
 
 const CATEGORY: Record<string, string> = {
-  pakistan: "Pakistan GK", cricket: "Cricket", world: "Duniya GK", science: "Science", math: "Math Speed",
+  pakistan: "Pakistan GK", world: "World GK", cricket: "Cricket", science: "Science", math: "Math Speed",
+  it: "IT & Computers", ai: "AI", entertainment: "Entertainment",
 };
 
 const ago = (t: number) => {

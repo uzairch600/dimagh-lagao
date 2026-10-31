@@ -4,11 +4,13 @@ import CategoryIcon from "./CategoryIcon";
 import { SITE } from "@/lib/site";
 
 const CATS = [
-  { id: "pakistan", name: "Pakistan GK" },
+  { id: "world", name: "World GK" },
   { id: "cricket", name: "Cricket" },
-  { id: "world", name: "Duniya GK" },
   { id: "science", name: "Science" },
   { id: "math", name: "Math Speed" },
+  { id: "it", name: "IT & Computers" },
+  { id: "ai", name: "AI" },
+  { id: "entertainment", name: "Entertainment" },
 ];
 
 // Shown at /play while the game server isn't deployed yet.

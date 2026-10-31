@@ -1,4 +1,3 @@
-import { Handshake, RotateCcw, Trophy, type LucideIcon } from "lucide-react";
 import { rs } from "@/lib/api";
 import type { MatchEnd, MatchFound, User } from "@/lib/types";
 import Avatar from "../Avatar";
@@ -6,15 +5,15 @@ import Confetti from "../Confetti";
 
 type Props = { end: MatchEnd; user: User; found: MatchFound | null; onAgain: () => void; onHome: () => void };
 
-const COPY: Record<MatchEnd["outcome"], { icon: LucideIcon; title: string; cls: string }> = {
-  win: { icon: Trophy, title: "Jeet gaye!", cls: "win" },
-  loss: { icon: RotateCcw, title: "Agli baar pakka!", cls: "loss" },
-  draw: { icon: Handshake, title: "Barabar!", cls: "draw" },
+const COPY: Record<MatchEnd["outcome"], { title: string; cls: string }> = {
+  win: { title: "Jeet gaye!", cls: "win" },
+  loss: { title: "Agli baar pakka!", cls: "lose" },
+  draw: { title: "Barabar!", cls: "draw" },
 };
 
 export default function Result({ end, user, found, onAgain, onHome }: Props) {
   const c = COPY[end.outcome];
-  const Icon = c.icon;
+
   const paid = end.mode !== "practice";
   let amount = "Practice match";
   let amountCls = "";
@@ -27,9 +26,7 @@ export default function Result({ end, user, found, onAgain, onHome }: Props) {
   return (
     <section className="screen center-col result">
       {end.outcome === "win" && <Confetti />}
-      <div className={`result-badge ${c.cls}`}>
-        <Icon size={56} strokeWidth={1.8} />
-      </div>
+      <img className={`result-art ${c.cls}`} src={`/images/result-${c.cls}.webp`} alt="" width={480} height={480} />
       <h1>{c.title}</h1>
       <p className={`result-amount ${amountCls}`}>{amount}</p>
 

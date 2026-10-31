@@ -8,11 +8,13 @@ import LiveFeed from "../LiveFeed";
 type Props = { user: User; config: Config; go: (s: Screen) => void; onPick: (c: Category) => void };
 
 const BLURB: Record<string, string> = {
-  pakistan: "Tareekh, jughrafia, culture",
+  world: "Pakistan aur duniya: tareekh, jughrafia",
   cricket: "Records, legends, rules",
-  world: "Capitals, history, duniya",
   science: "Jism, space, technology",
   math: "Tez hisaab — sab se fast jeete",
+  it: "Computer, internet, coding",
+  ai: "Machine learning, robots, AI tareekh",
+  entertainment: "Films, dramas, music, games",
 };
 
 export default function Home({ user, config, go, onPick }: Props) {

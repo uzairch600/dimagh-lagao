@@ -16,21 +16,17 @@ const TARGET_POOL_SIZE = Number(process.env.QUESTION_POOL_SIZE || 300); // per c
 const BATCH_SIZE = 25;
 
 export const CATEGORIES = [
-  { id: "pakistan", name: "Pakistan GK", urdu: "پاکستان", icon: "🇵🇰" },
-  { id: "cricket", name: "Cricket", urdu: "کرکٹ", icon: "🏏" },
-  { id: "world", name: "Duniya GK", urdu: "دنیا", icon: "🌍" },
-  { id: "science", name: "Science", urdu: "سائنس", icon: "🔬" },
-  { id: "math", name: "Math Speed", urdu: "حساب", icon: "⚡" },
+  { id: "world", name: "World GK", urdu: "معلومات عامہ" },
+  { id: "cricket", name: "Cricket", urdu: "کرکٹ" },
+  { id: "science", name: "Science", urdu: "سائنس" },
+  { id: "math", name: "Math Speed", urdu: "حساب" },
+  { id: "it", name: "IT & Computers", urdu: "کمپیوٹر" },
+  { id: "ai", name: "AI", urdu: "مصنوعی ذہانت" },
+  { id: "entertainment", name: "Entertainment", urdu: "تفریح" },
 ];
 
 // Rotating sub-topics keep AI batches varied instead of 300 versions of the same 20 facts.
 const SUBTOPICS = {
-  pakistan: [
-    "Pakistan Movement history 1857-1947", "geography: rivers, mountains, lakes, passes",
-    "cities and famous landmarks", "provinces, regions and their capitals", "national symbols and emblems",
-    "culture, food, festivals and dresses", "famous historic personalities", "Pakistani sports other than cricket (hockey, squash)",
-    "history 1947-2000", "Pakistani literature, poets and writers",
-  ],
   cricket: [
     "Pakistan cricket legends and their records", "ICC World Cup history", "cricket rules and terminology",
     "famous Test match records", "ODI records", "T20 history", "cricket grounds around the world",
@@ -39,12 +35,35 @@ const SUBTOPICS = {
   world: [
     "world capitals", "currencies", "world geography: rivers, mountains, oceans", "famous landmarks",
     "world history", "inventions and inventors", "languages and countries", "flags and national symbols",
-    "Muslim world geography and history",
+    "Muslim world geography and history", "Pakistan history and the Pakistan Movement", "Pakistan geography, cities and landmarks",
+    "Pakistan national symbols, culture and famous personalities",
   ],
   science: [
     "human body", "space and solar system", "chemistry and elements", "physics basics",
-    "plants and animals", "computers and technology", "famous scientists and discoveries", "everyday science",
+    "plants and animals", "famous scientists and discoveries", "everyday science",
   ],
+  it: [
+    "computer hardware basics", "operating systems", "internet and web basics", "programming languages",
+    "history of computing and famous tech companies (before 2023)", "file formats and abbreviations (CPU, RAM, URL...)",
+    "networking basics", "cyber security basics", "keyboard shortcuts and everyday software",
+  ],
+  ai: [
+    "history of artificial intelligence (Turing, Dartmouth 1956, expert systems)", "famous AI milestones before 2023 (Deep Blue, Watson, AlphaGo)",
+    "machine learning basic terms", "neural networks basics", "AI in everyday life (voice assistants, recommendations, maps)",
+    "robotics basics", "data and datasets basics", "AI ethics basics",
+  ],
+  entertainment: [
+    "classic animated films", "famous Hollywood films before 2023", "classic Bollywood and Lollywood films",
+    "famous Pakistani TV dramas before 2023", "music instruments and famous songs", "superheroes and comics",
+    "famous books and authors", "classic video games",
+  ],
+};
+
+// Extra rules per category on top of the general rules (accuracy-sensitive topics).
+const CATEGORY_RULES = {
+  entertainment: "Only well-known, long-settled facts about films, books, music and games. Nothing about celebrities' personal lives, relationships, religion or politics.",
+  ai: "Only established, textbook facts. Never ask about the newest models, companies' current products, or anything after 2022.",
+  it: "Only established facts. Never ask about prices, latest versions or current market share.",
 };
 
 const client = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
@@ -63,12 +82,16 @@ if (fs.existsSync(POOL_FILE)) {
     pool = {};
   }
 }
+// "Pakistan GK" was merged into World GK: carry its questions over.
+if (pool.pakistan) {
+  pool.world = [...(pool.world || []), ...pool.pakistan];
+  delete pool.pakistan;
+}
 for (const [cat, items] of Object.entries(SEED)) {
   pool[cat] ||= [];
-  const have = new Set(pool[cat].map((x) => x.id));
+  const have = new Set(pool[cat].map((x) => norm(x.q)));
   for (const [q, correct, wrong] of items) {
-    const id = hashId(cat, q);
-    if (!have.has(id)) pool[cat].push({ id, q, correct, wrong, difficulty: "easy", source: "seed" });
+    if (!have.has(norm(q))) pool[cat].push({ id: hashId(cat, q), q, correct, wrong, difficulty: "easy", source: "seed" });
   }
 }
 savePool();
@@ -188,7 +211,7 @@ async function generateBatch(category) {
     system: GEN_SYSTEM,
     messages: [{
       role: "user",
-      content: `Category: ${catName}\nFocus topic: ${topic}\nWrite ${BATCH_SIZE} new questions with exactly 3 wrong answers each.\n\nDo not repeat or rephrase these existing questions:\n${existing}`,
+      content: `Category: ${catName}\nFocus topic: ${topic}\n${CATEGORY_RULES[category] ? `Extra rules: ${CATEGORY_RULES[category]}\n` : ""}Write ${BATCH_SIZE} new questions with exactly 3 wrong answers each.\n\nDo not repeat or rephrase these existing questions:\n${existing}`,
     }],
   });
   if (gen.stop_reason !== "end_turn" || !gen.parsed_output) {
