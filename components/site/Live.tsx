@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { Activity, Swords, Trophy, Users } from "lucide-react";
 import { api, rs } from "@/lib/api";
+import { GAME_LIVE } from "@/lib/site";
 import type { LeaderRow } from "@/lib/types";
 import Avatar from "../Avatar";
 
@@ -27,10 +28,12 @@ const ago = (t: number) => {
   return `${Math.floor(s / 86400)} din pehle`;
 };
 
+// null = loading, "off" = no game server (static hosting or server down)
 function useLive(intervalMs = 10000) {
-  const [live, setLive] = useState<Live | null>(null);
+  const [live, setLive] = useState<Live | "off" | null>(GAME_LIVE ? null : "off");
   useEffect(() => {
-    const load = () => api<Live>("/api/live").then(setLive).catch(() => {});
+    if (!GAME_LIVE) return;
+    const load = () => api<Live>("/api/live").then(setLive).catch(() => setLive((l) => (l && l !== "off" ? l : "off")));
     load();
     const t = setInterval(load, intervalMs);
     return () => clearInterval(t);
@@ -38,8 +41,16 @@ function useLive(intervalMs = 10000) {
   return live;
 }
 
+const prelaunch = (
+  <div className="site-empty">
+    <Trophy size={32} />
+    <p>Game launch hote hi taaza winners yahan live nazar aayenge.</p>
+  </div>
+);
+
 export function LiveStrip() {
   const live = useLive();
+  if (live === "off") return null;
   const items = [
     { icon: Users, value: live ? String(live.online) : "—", label: "Abhi online" },
     { icon: Swords, value: live ? String(live.playing) : "—", label: "Match khel rahe hain" },
@@ -63,6 +74,7 @@ export function LiveStrip() {
 
 export function WinnersList({ limit = 12 }: { limit?: number }) {
   const live = useLive();
+  if (live === "off") return prelaunch;
   if (!live) return <div className="site-empty">Load ho raha hai…</div>;
   if (!live.recent.length)
     return (
@@ -90,12 +102,14 @@ export function WinnersList({ limit = 12 }: { limit?: number }) {
 }
 
 export function LeaderboardTable() {
-  const [rows, setRows] = useState<LeaderRow[] | null>(null);
+  const [rows, setRows] = useState<LeaderRow[] | null>(GAME_LIVE ? null : []);
   useEffect(() => {
+    if (!GAME_LIVE) return;
     api<{ players: LeaderRow[] }>("/api/leaderboard")
       .then((d) => setRows(d.players))
       .catch(() => setRows([]));
   }, []);
+  if (!GAME_LIVE) return prelaunch;
   if (!rows) return <div className="site-empty">Load ho raha hai…</div>;
   if (!rows.length)
     return (
