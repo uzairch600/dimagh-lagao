@@ -40,7 +40,7 @@ export default function FairPlay() {
             </p>
             <ul>
               <li>Computer hamesha &quot;Computer&quot; naam aur robot icon ke saath dikhta hai.</li>
-              <li>Us ki taqat sab ke liye ek jaisi aur fix hai: taqreeban <b>65% sawal sahi</b>, jawab <b>2.5 se 7 second</b> mein.</li>
+              <li>Us ki taqat sab ke liye ek jaisi aur fix hai: taqreeban <b>65% sawal sahi</b>, jawab <b>4 se 14 second</b> mein.</li>
               <li>Computer ke paas sahi jawab pehle se nahi hota jo aap ke khilaf istemal ho — wo bas apni fix accuracy par khelta hai.</li>
               <li>Agar aap match ke beech chale jayein, to match poora khela jata hai — jaldi nikal kar faida nahi uthaya ja sakta.</li>
             </ul>

@@ -60,6 +60,7 @@ export type MatchFound = {
   total: number;
   seconds: number;
   resumed?: boolean;
+  preparing?: boolean;
   you: PlayerInfo;
   opponent: PlayerInfo;
   balance: number;

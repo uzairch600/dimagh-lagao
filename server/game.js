@@ -1,10 +1,10 @@
 // Matchmaking and live 1v1 matches. The server owns the clock and the answer key:
 // clients never see the correct answer until both players have answered (or time runs out).
 import * as db from "./db.js";
-import { CATEGORIES, pickQuestions } from "./questions.js";
+import { CATEGORIES, questionsForMatch } from "./questions.js";
 
 export const QUESTIONS_PER_MATCH = 10;
-export const SECONDS_PER_QUESTION = 10;
+export const SECONDS_PER_QUESTION = 20;
 export const RAKE = 0.1; // platform share of the pot
 export const ENTRY_TIERS = [20, 50, 100, 500];
 const GRACE_MS = 600; // network allowance on the answer deadline
@@ -88,8 +88,8 @@ export function startHouse(socket, user, { category, entry }) {
 export const HOUSE_MAX_ENTRY = Number(process.env.HOUSE_MAX_ENTRY || 100);
 export const HOUSE_WAIT_SECONDS = 30; // how long a player searches before the app plays them itself
 const BOT_SKILL = {
-  practice: { accuracy: 0.6, minMs: 2000, maxMs: 8000 },
-  house: { accuracy: Number(process.env.HOUSE_BOT_ACCURACY || 0.65), minMs: 2500, maxMs: 7000 },
+  practice: { accuracy: 0.6, minMs: 3000, maxMs: 15000 },
+  house: { accuracy: Number(process.env.HOUSE_BOT_ACCURACY || 0.65), minMs: 4000, maxMs: 14000 },
 };
 const isPaid = (mode) => mode === "paid" || mode === "house";
 
@@ -102,15 +102,13 @@ function startMatch({ mode, category, entry, a, b }) {
     players.push({ userId: "bot", name: "Computer", avatar: "bot", socket: null, bot: true, score: 0, correct: 0, answers: [] });
   }
 
-  const seen = players.filter((p) => !p.bot).map((p) => db.seenSet(p.userId));
-  const questions = pickQuestions(category, QUESTIONS_PER_MATCH, seen);
-
   if (isPaid(mode)) {
     for (const p of players) if (!p.bot) db.addTransaction(p.userId, "entry", -entry, `Match entry (${categoryName(category)})`);
     if (mode === "house") db.addHouse(entry);
   }
 
-  const m = { id, mode, category, entry, prize: isPaid(mode) ? prizeFor(entry) : 0, players, questions, index: -1, phase: "countdown", askedAt: 0, timer: null, done: false };
+  // Questions are written by the AI now, for this match only; players see a "preparing" state meanwhile.
+  const m = { id, mode, category, entry, prize: isPaid(mode) ? prizeFor(entry) : 0, players, questions: [], index: -1, phase: "preparing", askedAt: 0, timer: null, done: false };
   matches.set(id, m);
   for (const p of players) {
     if (p.bot) continue;
@@ -123,13 +121,44 @@ function startMatch({ mode, category, entry, a, b }) {
     const opp = players.find((x) => x !== p);
     p.socket.emit("match:found", {
       matchId: id, mode, category: categoryName(category), entry, prize: m.prize,
-      total: questions.length, seconds: SECONDS_PER_QUESTION,
+      total: QUESTIONS_PER_MATCH, seconds: SECONDS_PER_QUESTION, preparing: true,
       you: { name: p.name, avatar: p.avatar },
       opponent: { name: opp.name, avatar: opp.avatar, bot: opp.bot },
       balance: db.getUser(p.userId).balance,
     });
   }
-  m.timer = setTimeout(() => ask(m), COUNTDOWN_MS);
+
+  const seen = players.filter((p) => !p.bot).map((p) => db.seenSet(p.userId));
+  questionsForMatch(category, QUESTIONS_PER_MATCH, seen)
+    .catch((err) => {
+      console.error("[game] could not prepare questions:", err);
+      return [];
+    })
+    .then((questions) => {
+      if (m.done) return;
+      if (questions.length < QUESTIONS_PER_MATCH) return cancelMatch(m, "Sawal tayyar nahi ho sake — entry wapas kar di gayi");
+      m.questions = questions;
+      m.phase = "countdown";
+      io.to(m.id).emit("match:ready", { total: questions.length });
+      m.timer = setTimeout(() => ask(m), COUNTDOWN_MS);
+    });
+}
+
+// Ends a match that never started (e.g. questions failed) and gives every entry back.
+function cancelMatch(m, reason) {
+  m.done = true;
+  clearTimeout(m.timer);
+  if (isPaid(m.mode)) {
+    for (const p of m.players) if (!p.bot) db.addTransaction(p.userId, "refund", m.entry, "Match cancel — entry wapas");
+    if (m.mode === "house") db.addHouse(-m.entry);
+  }
+  for (const p of m.players) {
+    if (p.bot) continue;
+    activeByUser.delete(p.userId);
+    p.socket?.leave(m.id);
+    p.socket?.emit("match:cancelled", { reason, balance: db.getUser(p.userId).balance });
+  }
+  matches.delete(m.id);
 }
 
 function ask(m) {
@@ -280,7 +309,7 @@ export function rejoin(userId, socket) {
   const opp = m.players.find((x) => x !== p);
   socket.emit("match:found", {
     matchId: m.id, mode: m.mode, category: categoryName(m.category), entry: m.entry, prize: m.prize,
-    total: m.questions.length, seconds: SECONDS_PER_QUESTION, resumed: true,
+    total: QUESTIONS_PER_MATCH, seconds: SECONDS_PER_QUESTION, resumed: m.phase !== "preparing", preparing: m.phase === "preparing",
     you: { name: p.name, avatar: p.avatar, score: p.score },
     opponent: { name: opp.name, avatar: opp.avatar, bot: opp.bot, score: opp.score },
     balance: db.getUser(userId).balance,

@@ -92,6 +92,18 @@ export default function GameApp() {
       setScreen(f.resumed ? "match" : "versus");
     });
 
+    s.on("match:ready", ({ total }: { total: number }) => {
+      sfx.found();
+      setMatch((m) => (m ? { ...m, found: { ...m.found, preparing: false, total } } : m));
+    });
+
+    s.on("match:cancelled", ({ reason, balance }: { reason: string; balance: number }) => {
+      setMatch(null);
+      setUser((u) => (u ? { ...u, balance } : u));
+      setScreen("play");
+      notify(reason, "error");
+    });
+
     s.on("match:question", (q: Question) => {
       setMatch((m) => (m ? { ...m, question: q, reveal: null, myChoice: null, oppAnswered: false } : m));
       setScreen("match");
@@ -248,7 +260,7 @@ export default function GameApp() {
                 onCancel={cancelSearch} onPlayComputer={startHouse}
               />
             )}
-            {screen === "versus" && match && <Versus found={match.found} />}
+            {screen === "versus" && match && <Versus key={match.found.preparing ? "prep" : "go"} found={match.found} />}
             {screen === "match" && match && <Match state={match} onAnswer={answer} />}
             {screen === "result" && end && <Result end={end} user={user} found={match?.found ?? null} onAgain={playAgain} onHome={() => go("home")} />}
             {screen === "wallet" && <Wallet user={user} config={config} setSheet={setSheet} notify={notify} refreshMe={refreshMe} />}

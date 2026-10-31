@@ -14,7 +14,7 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
   { q: "Kaun khel sakta hai?", a: `Pakistan mein rehne wala koi bhi ${SITE.minAge} saal ya us se zyada umar ka shakhs. Ek insaan, ek account.` },
   { q: "Kitne ka match hota hai?", a: "Entry Rs 20, 50, 100 ya 500. Jeetne wale ko dono entries ka pot milta hai, platform fee kaat kar — maslan Rs 50 entry par Rs 90." },
   { q: "Agar koi muqabil na mile to?", a: "30 second tak asli player dhoonda jata hai. Na mile to app khud \"Computer\" ban kar aap ke saath khelti hai (Rs 100 tak ki entry par) aur aap ke muqable mein utni hi raqam lagati hai. Computer hamesha saaf naam aur robot icon ke saath dikhta hai — kabhi insaan ban kar nahi." },
-  { q: "Computer kitna strong hai?", a: "Computer har player ke liye ek jaisa hai — taqreeban 65% sawal sahi karta hai aur 2.5 se 7 second mein jawab deta hai. Tafseel Fair Play page par hai." },
+  { q: "Computer kitna strong hai?", a: "Computer har player ke liye ek jaisa hai — taqreeban 65% sawal sahi karta hai aur 4 se 14 second mein jawab deta hai. Tafseel Fair Play page par hai." },
   { q: "Draw ho jaye to?", a: "Dono players ki poori entry wapas wallet mein aa jati hai." },
   { q: "Paise kaise nikalein?", a: "Wallet → Nikalwayein. Easypaisa, JazzCash ya bank account chunein. Kam az kam Rs 200. Pehli dafa CNIC verification ho sakti hai." },
   { q: "Agar beech match internet chala jaye?", a: "Match chalta rehta hai. Wapas aane par aap usi match mein laut aate hain. Jo sawal miss hue un par 0 points." },

@@ -58,7 +58,7 @@ export default function HowToPlay() {
             </p>
 
             <h2>5. Scoring</h2>
-            <p>Dono players ko bilkul same 10 sawal, same order mein milte hain. Har sawal ke liye 10 second.</p>
+            <p>Dono players ko bilkul same 10 sawal, same order mein milte hain. Har sawal ke liye 20 second.</p>
             <ul>
               <li><b>Sahi jawab:</b> 100 points</li>
               <li><b>Speed bonus:</b> jitna jaldi, utna zyada — 0 se 100 extra points</li>
@@ -74,7 +74,7 @@ export default function HowToPlay() {
           </article>
 
           <aside className="side-cards">
-            <div className="side-card"><Timer size={22} /><b>10 sawal × 10 second</b><p>Poora match taqreeban 2 minute.</p></div>
+            <div className="side-card"><Timer size={22} /><b>10 sawal × 20 second</b><p>Poora match taqreeban 3-4 minute.</p></div>
             <div className="side-card"><Target size={22} /><b>Sahi + tez = jeet</b><p>Har sahi jawab par speed bonus.</p></div>
             <div className="side-card"><Bot size={22} /><b>30 second rule</b><p>Player na mile to app khud khelti hai.</p></div>
             <div className="side-card"><Wallet size={22} /><b>Draw par refund</b><p>Barabar points par entry wapas.</p></div>

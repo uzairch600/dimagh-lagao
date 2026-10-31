@@ -57,7 +57,7 @@ export default function Landing() {
             </div>
             <ul className="hero-points">
               <li><ShieldCheck size={16} /> Skill game — qismat nahi</li>
-              <li><Clock size={16} /> 2 minute ka match</li>
+              <li><Clock size={16} /> 3-4 minute ka match</li>
               <li><Smartphone size={16} /> Mobile aur desktop dono par</li>
             </ul>
           </div>
