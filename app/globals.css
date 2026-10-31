@@ -726,3 +726,11 @@ img.site-logo-mark { padding: 0; object-fit: cover; }
   .cat2-art { width: 132px; min-width: 132px; }
   .cat2-body b { font-size: 18px; }
 }
+.dash .home-hero { margin-bottom: 18px; }
+.dash-simple { max-width: none; }
+.play-head { margin-top: 6px; }
+.play-head .page-title { margin: 0; }
+@media (min-width: 1024px) {
+  .dash-simple { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); align-items: start; }
+  .dash-simple .dash-play { grid-column: 1 / -1; }
+}

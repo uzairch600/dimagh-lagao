@@ -240,7 +240,7 @@ export default function GameApp() {
         {user && config && (
           <>
             {screen === "home" && <Home user={user} config={config} go={go} />}
-            {screen === "play" && <Play user={user} config={config} go={go} onPick={openPlaySheet} />}
+            {screen === "play" && <Play config={config} onPick={openPlaySheet} />}
             {screen === "searching" && searching && (
               <Searching
                 info={searching} name={user.name} avatar={user.avatar}

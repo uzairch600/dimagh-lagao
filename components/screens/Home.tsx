@@ -1,4 +1,5 @@
-import { Gamepad2, Plus } from "lucide-react";
+import { Gamepad2, Plus, Timer, Trophy, Zap } from "lucide-react";
+import { rs } from "@/lib/api";
 import type { Config, Screen, User } from "@/lib/types";
 import Avatar from "../Avatar";
 import LiveFeed from "../LiveFeed";
@@ -9,6 +10,7 @@ type Props = { user: User; config: Config; go: (s: Screen) => void };
 export default function Home({ user, config, go }: Props) {
   const played = user.wins + user.losses + user.draws;
   const rate = played ? Math.round((user.wins / played) * 100) : 0;
+  const maxPrize = Math.max(...config.tiers.map((t) => t.prize));
 
   return (
     <section className="screen dash">
@@ -28,6 +30,22 @@ export default function Home({ user, config, go }: Props) {
           </span>
         </button>
       </header>
+
+      <div className="home-hero">
+        <div className="home-hero-copy">
+          <span className="tag">LIVE 1v1</span>
+          <h2>
+            Aaj kis ko <span className="gold">harana</span> hai?
+          </h2>
+          <p>Category chunein, muqabil se milein, aur {rs(maxPrize)} tak jeetein.</p>
+          <div className="home-hero-chips">
+            <span><Zap size={14} /> {config.questions} sawal</span>
+            <span><Timer size={14} /> {config.seconds} sec har sawal</span>
+            <span><Trophy size={14} /> {rs(maxPrize)} tak</span>
+          </div>
+        </div>
+        <img className="home-hero-art" src="/images/hero.webp" alt="" width={1408} height={768} />
+      </div>
 
       <div className="dash-simple">
         <div className="my-stats card glass">
