@@ -20,7 +20,7 @@ export default function PlaySheet({ category, config, balance, onPlay, onPractic
       </h3>
       <p className="sub">Entry fee chunein — jeetne wala poora inaam le jata hai</p>
       <div className="tiers">
-        {config.tiers.map((t, i) => {
+        {(category.group === "puzzle" ? config.puzzleTiers : config.tiers).map((t, i) => {
           const locked = balance < t.entry;
           return (
             <button

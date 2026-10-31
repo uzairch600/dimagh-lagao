@@ -3,7 +3,8 @@
 import { useRef } from "react";
 import { Flag, Rocket } from "lucide-react";
 
-// Shared by "Number Raasta" (numbers to join in order, every cell once) and the maze (walls block moves).
+// Shared by "Number Raasta" (numbers to join in order, every cell once), "Ek Lakeer" (every open cell once, from the
+// start) and the maze (walls block moves).
 type Props = {
   n: number;
   path: number[];
@@ -12,16 +13,17 @@ type Props = {
   open?: number[]; // maze: bit 1 = open to the right, bit 2 = open downwards
   start?: number;
   end?: number;
+  blocked?: number[]; // Ek Lakeer: cells the line can never enter
 };
 
-export default function PathBoard({ n, path, setPath, numbers = [], open, start, end }: Props) {
+export default function PathBoard({ n, path, setPath, numbers = [], open, start, end, blocked = [] }: Props) {
   const dragging = useRef(false);
   const numberAt = new Map(numbers.map(([cell, num]) => [cell, num]));
   const first = numbers.find(([, num]) => num === 1)?.[0] ?? start ?? 0;
 
   const adjacent = (a: number, b: number) => {
     const ra = Math.floor(a / n), rb = Math.floor(b / n);
-    const next = (Math.abs(a - b) === 1 && ra === rb) || Math.abs(a - b) === n;
+    const next = ((Math.abs(a - b) === 1 && ra === rb) || Math.abs(a - b) === n) && !blocked.includes(b);
     if (!next || !open) return next;
     const [lo, hi] = a < b ? [a, b] : [b, a];
     return hi === lo + 1 ? (open[lo] & 1) > 0 : (open[lo] & 2) > 0;
@@ -59,7 +61,7 @@ export default function PathBoard({ n, path, setPath, numbers = [], open, start,
 
   return (
     <div
-      className={`pz-grid path ${open ? "maze" : ""}`}
+      className={`pz-grid path ${open ? "maze" : ""} ${blocked.length ? "oneline" : ""}`}
       style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}
       onPointerMove={move}
       onPointerUp={() => (dragging.current = false)}
@@ -78,7 +80,7 @@ export default function PathBoard({ n, path, setPath, numbers = [], open, start,
           <div
             key={i}
             data-cell={i}
-            className={`pz-cell${walls}${visited.has(i) ? " on" : ""}`}
+            className={`pz-cell${walls}${visited.has(i) ? " on" : ""}${blocked.includes(i) ? " blocked" : ""}`}
             onPointerDown={(e) => {
               (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
               down(i);
@@ -86,6 +88,7 @@ export default function PathBoard({ n, path, setPath, numbers = [], open, start,
           >
             {numberAt.has(i) && <span className={`pz-num ${visited.has(i) ? "hit" : ""}`}>{numberAt.get(i)}</span>}
             {open && i === start && <Rocket size={18} className="pz-start" />}
+            {!open && blocked.length > 0 && i === start && <span className="pz-num hit">●</span>}
             {open && i === end && <Flag size={18} className="pz-end" />}
           </div>
         );

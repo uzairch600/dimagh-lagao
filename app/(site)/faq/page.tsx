@@ -12,7 +12,7 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
   { q: "Dimagh Lagao kya hai?", a: "Ek 1v1 quiz game jahan do players same sawalon par muqabla karte hain. Jo zyada sahi aur zyada tez jawab de, wohi inaam jeetta hai." },
   { q: "Kya ye jua hai?", a: "Nahi. Yahan koi dice, card ya spin nahi. Nateeja sirf aap ke ilm aur raftar par hai — dono players ko bilkul same sawal milte hain." },
   { q: "Kaun khel sakta hai?", a: `Pakistan mein rehne wala koi bhi ${SITE.minAge} saal ya us se zyada umar ka shakhs. Ek insaan, ek account.` },
-  { q: "Kitne ka match hota hai?", a: "Entry Rs 20, 50, 100 ya 500. Jeetne wale ko dono entries ka pot milta hai, 30% platform fee kaat kar — maslan Rs 50 entry par pot Rs 100, jeetne wale ko Rs 70." },
+  { q: "Kitne ka match hota hai?", a: "Quiz ki entry Rs 20, 50, 100, 500 ya 1000; puzzles ki Rs 20, 50 ya 100. Jeetne wale ko dono entries ka pot milta hai, 30% platform fee kaat kar — maslan Rs 50 entry par pot Rs 100, jeetne wale ko Rs 70." },
   { q: "Agar koi muqabil na mile to?", a: "30 second tak asli player dhoonda jata hai. Na mile to aap ko Puzzle Challenge milta hai: ek puzzle, 100 second. Waqt par hal kiya to match ka poora inaam aap ka, warna entry gayi. Paid quiz hamesha do insaanon ke beech hota hai." },
   { q: "Draw ho jaye to?", a: "Dono players ki poori entry wapas wallet mein aa jati hai." },
   { q: "Paise kaise nikalein?", a: "Wallet → Nikalwayein. Easypaisa, JazzCash ya bank account chunein. Kam az kam Rs 200. Pehli dafa CNIC verification ho sakti hai." },

@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { PUZZLES_PER_MATCH, PUZZLE_KINDS, puzzleRound } from "./puzzles.js";
+import { PUZZLES_PER_MATCH, PUZZLE_CATEGORIES, PUZZLE_KINDS, puzzleRound } from "./puzzles.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
@@ -25,10 +25,7 @@ export const CATEGORIES = [
   { id: "it", name: "IT & Computers", urdu: "کمپیوٹر", group: "quiz" },
   { id: "ai", name: "AI", urdu: "مصنوعی ذہانت", group: "quiz" },
   { id: "entertainment", name: "Entertainment", urdu: "تفریح", group: "quiz" },
-  { id: "crowns", name: "Taaj", urdu: "تاج", group: "puzzle" },
-  { id: "sunmoon", name: "Suraj Chaand", urdu: "سورج چاند", group: "puzzle" },
-  { id: "path", name: "Number Raasta", urdu: "راستہ", group: "puzzle" },
-  { id: "maze", name: "Bhool Bhulaiyan", urdu: "بھول بھلیاں", group: "puzzle" },
+  ...PUZZLE_CATEGORIES,
 ];
 
 // Categories made on the server without AI (no prefetch, no pool, never repeat).
@@ -40,42 +37,44 @@ export const questionCount = (category, normal) => (PUZZLE_KINDS.includes(catego
 // Rotating sub-topics keep AI batches varied instead of 300 versions of the same 20 facts.
 const SUBTOPICS = {
   cricket: [
-    "Pakistan cricket legends and their records", "ICC World Cup history", "cricket rules and terminology",
-    "famous Test match records", "ODI records", "T20 history", "cricket grounds around the world",
-    "nicknames of famous cricketers",
+    "Pakistan cricket legends and their records", "ICC World Cup history", "Pakistan's ICC titles: 1992, 2009 and 2017",
+    "PSL history, teams and records", "Pakistan vs India matches through the years", "famous Test match records", "ODI records",
+    "T20 history", "cricket rules and terminology", "nicknames of famous cricketers",
   ],
   world: [
-    "world capitals", "currencies", "world geography: rivers, mountains, oceans", "famous landmarks",
-    "world history", "inventions and inventors", "languages and countries", "flags and national symbols",
+    "world geography: rivers, mountains, oceans", "famous landmarks", "world history everyone studies at school",
+    "inventions and inventors", "languages and countries", "flags and national symbols", "currencies",
     "Muslim world geography and history", "Pakistan history and the Pakistan Movement", "Pakistan geography, cities and landmarks",
-    "Pakistan national symbols, culture and famous personalities",
+    "Pakistan national symbols, culture and famous personalities", "Pakistan's neighbours: China, Iran, Afghanistan, India, Gulf countries",
+    "Olympics, hockey, football and other sports Pakistanis follow",
   ],
   science: [
-    "human body", "space and solar system", "chemistry and elements", "physics basics",
-    "plants and animals", "famous scientists and discoveries", "everyday science",
+    "human body", "space and solar system", "chemistry and elements", "physics basics", "plants and animals",
+    "famous scientists and discoveries", "everyday science", "weather, monsoon, glaciers and rivers of Pakistan",
+    "health, food and nutrition science",
   ],
   it: [
     "computer hardware basics", "operating systems", "internet and web basics", "programming languages",
-    "history of computing and famous tech companies (before 2023)", "file formats and abbreviations (CPU, RAM, URL...)",
-    "networking basics", "cyber security basics", "keyboard shortcuts and everyday software",
+    "history of computing and famous tech companies (before 2023)", "networking basics", "cyber security basics",
+    "smartphones and the apps people use every day", "digital payments and mobile networks in Pakistan",
   ],
   ai: [
     "history of artificial intelligence (Turing, Dartmouth 1956, expert systems)", "famous AI milestones before 2023 (Deep Blue, Watson, AlphaGo)",
     "machine learning basic terms", "neural networks basics", "AI in everyday life (voice assistants, recommendations, maps)",
-    "robotics basics", "data and datasets basics", "AI ethics basics",
+    "robotics basics", "AI chatbots and tools people use, pinned to their launch year", "AI ethics basics",
   ],
   entertainment: [
-    "classic animated films", "famous Hollywood films before 2023", "classic Bollywood and Lollywood films",
-    "famous Pakistani TV dramas before 2023", "music instruments and famous songs", "superheroes and comics",
-    "famous books and authors", "classic video games",
+    "famous Pakistani TV dramas before 2023", "Pakistani music legends and Coke Studio Pakistan", "classic Bollywood and Lollywood films",
+    "famous Hollywood films before 2023", "classic animated films and cartoons", "superheroes and comics",
+    "famous books, poets and authors (including Urdu literature)", "classic video games", "music instruments and famous songs",
   ],
 };
 
 // Extra rules per category on top of the general rules (accuracy-sensitive topics).
 const CATEGORY_RULES = {
   entertainment: "Only well-known, long-settled facts about films, books, music and games. Nothing about celebrities' personal lives, relationships, religion or politics.",
-  ai: "Mix AI history, core concepts (algorithms, architectures, training) and dated milestones; pin anything recent to its year. No opinions or predictions.",
-  it: "Technical questions are welcome (protocols, ports, standards, data structures, hardware specs); pin anything recent to its year. No prices or market share.",
+  ai: "Mix AI history, well-known milestones and the basic ideas behind AI tools people use; pin anything recent to its year. No opinions or predictions, no research-paper detail.",
+  it: "Tech that phone and computer users actually meet, plus well-known tech history; pin anything recent to its year. No prices or market share, no specialist detail (port numbers, RFCs, chip specs).",
 };
 
 const client = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
@@ -224,20 +223,23 @@ const VerdictSchema = z.object({
   verdicts: z.array(z.object({ number: z.number().int(), ok: z.boolean(), problem: z.string() })),
 });
 
-const GEN_SYSTEM = `You write INSANE-level multiple-choice quiz questions for a Pakistani 1v1 quiz-battle app where experts compete for prizes. Accuracy matters more than anything.
+const GEN_SYSTEM = `You write multiple-choice quiz questions for a Pakistani 1v1 quiz-battle app with money prizes. The players are ordinary Pakistanis: students, office workers, cricket fans, people who follow the news and watch dramas. Accuracy matters more than anything.
 Rules:
 - Build every question ONLY on the researched facts you are given. Never invent a fact.
-- Every question must be very hard: something only a true expert or obsessive fan would get right. Never ask textbook basics: no definitions, no "what does X stand for", no keyboard shortcuts, no famous capitals, no "who invented the telephone"-level trivia.
-- Be creative. Mix these styles:
-  * exact figures and records ("How many ... did ... score/sell/measure ...?")
-  * reverse lookups (give a precise stat or event, ask who/what it was)
+- Level: hard but FAIR. A well-read Pakistani who follows this topic should be able to get it right; a casual player should find it a real challenge. Never ask what only a specialist, a researcher or a foreigner living there could know.
+- Audience first: Pakistan and South Asia, then the Muslim world, then subjects famous all over the world (things in Pakistani news, school books, cricket coverage, popular films and dramas). Never ask about American or European local politics, local sports leagues, local TV, states, counties or cities, minor foreign celebrities or little-known foreign companies.
+- No textbook basics either: no definitions, no "what does X stand for", no keyboard shortcuts, no famous capital cities.
+- Prefer memorable facts that make a player say "arre haan!": records, firsts, numbers, places, who did what, how things work.
+- Mix these styles:
+  * figures and records ("How many ... did ... score/win/measure ...?")
+  * reverse lookups (give a well-known stat or event, ask who/what it was)
   * connections ("Which of these four ALSO ...?")
   * cause and detail ("Why / how / where did ... happen?")
 - Never write "Which came first" or "Which of these is NOT / did NOT" questions.
 - Spread the questions out: at most 2 questions about the same person, place, team, element, film, company or event.
 - Ask about the subject itself, never about where the fact was published: no questions about websites, press releases, articles or documents, and never name a source in the question.
 - Players get only 10 seconds, so each question must be readable in about 4 seconds: under 20 words, answers 1-5 words, no trick wording.
-- Exactly one answer is correct; the three wrong answers must be very plausible (same type, close numbers, same era) but definitely wrong.
+- Exactly one answer is correct; the three wrong answers must be plausible (same type, close numbers, same era) but definitely wrong.
 - If a fact can change over time, put the date or season in the question. Never use "current", "latest", "now" or "recently".
 - Simple English. Nothing religiously, politically or ethnically controversial; nothing about celebrities' private lives.`;
 
@@ -247,7 +249,8 @@ const VERIFY_SYSTEM = `You are a strict fact-checker for a quiz app with money p
 - the question is unambiguous, and any time-sensitive fact is pinned to a date or season in the question,
 - it is not religiously, politically or ethnically controversial,
 - it asks about the subject itself, not about a website, press release, article or the source of the fact,
-- it is not a "which came first" or "which is NOT" question.
+- it is not a "which came first" or "which is NOT" question,
+- it is fair for an ordinary Pakistani player who follows the topic: reject questions about American or European local politics, local leagues, local TV or places, minor foreign celebrities, little-known foreign companies, or details only a specialist would know.
 When in doubt, set ok=false. For every question, put a few words in "problem" saying what is wrong (empty if ok).`;
 
 // ---------- cost control ----------

@@ -40,7 +40,7 @@ export default function SunMoonBoard({ n, givens, hints, values, onTap }: Props)
         const right = hints.find(([a, b]) => a === i && b === i + 1);
         const down = hints.find(([a, b]) => a === i && b === i + n);
         return (
-          <Cell key={i} className={`pz-cell ${fixed ? "fixed" : ""} ${bad.has(i) ? "clash" : ""}`} onClick={() => !fixed && onTap?.(i)}>
+          <Cell key={i} data-cell={i} className={`pz-cell ${fixed ? "fixed" : ""} ${bad.has(i) ? "clash" : ""}`} onClick={() => !fixed && onTap?.(i)}>
             {v === 0 && <Sun size={24} strokeWidth={2.4} className="pz-sun" />}
             {v === 1 && <Moon size={22} strokeWidth={2.4} className="pz-moon" />}
             {right && <span className="pz-hint h">{right[2] ? "=" : "×"}</span>}

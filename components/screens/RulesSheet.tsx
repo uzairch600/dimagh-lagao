@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DoorClosed, Eye, Gauge, Hourglass, ShieldAlert, Timer, Wifi } from "lucide-react";
 import PuzzleGuide from "./PuzzleGuide";
+import { isPuzzleKind } from "../puzzles/registry";
 import { rs } from "@/lib/api";
 import type { Config, Puzzle } from "@/lib/types";
 
@@ -14,15 +15,17 @@ type Props = {
   seconds: number;
   rake: number;
   scoring: Config["scoring"];
+  challengeMaxEntry: number;
+  refundSeconds: number;
   onStart: () => void;
   onBack: () => void;
 };
 
 // Shown before every match. The player must agree before they can start.
-export default function RulesSheet({ categoryId, categoryName, entry, prize, seconds, rake, scoring, onStart, onBack }: Props) {
+export default function RulesSheet({ categoryId, categoryName, entry, prize, seconds, rake, scoring, challengeMaxEntry, refundSeconds, onStart, onBack }: Props) {
   const [agree, setAgree] = useState(false);
   const fullSecs = scoring.fullMs / 1000;
-  const puzzle = ["crowns", "sunmoon", "path", "maze"].includes(categoryId);
+  const puzzle = isPuzzleKind(categoryId);
   const rules = [
     {
       icon: DoorClosed,
@@ -30,7 +33,7 @@ export default function RulesSheet({ categoryId, categoryName, entry, prize, sec
       en: entry ? "No leaving after Start. Leave the lobby or match and you lose the entry; the opponent wins." : "No leaving after Start. Leaving counts as a loss.",
     },
     puzzle
-      ? { icon: Timer, ur: "3 puzzles, chhote se bade. Har puzzle ka waqt us ke size ke hisaab se (45 se 150 second) screen par dikhta hai.", en: "3 puzzles, small to big. Each has its own time based on its size (45-150 seconds)." }
+      ? { icon: Timer, ur: "1 puzzle, 100 second. Dono players ko bilkul same puzzle milta hai — jo pehle hal kare, wohi aage.", en: "One puzzle, 100 seconds. Both players get the same puzzle; the faster solver wins." }
       : { icon: Timer, ur: `Har sawal ke liye sirf ${seconds} second.`, en: `${seconds} seconds per question.` },
     puzzle
       ? {
@@ -43,7 +46,14 @@ export default function RulesSheet({ categoryId, categoryName, entry, prize, sec
           ur: `Jitna tez sahi jawab, utne zyada points: ${fullSecs} second tak ${scoring.max}, phir kam hote hote aakhri second par ${scoring.min}. Ghalat jawab = 0.`,
           en: `Faster right answers score more: ${scoring.max} points up to ${fullSecs}s, falling to ${scoring.min} at the last second. Wrong = 0.`,
         },
-    ...(entry
+    ...(entry && entry > challengeMaxEntry
+      ? [{
+          icon: Hourglass,
+          ur: `Is entry par sirf asli muqabil se match hota hai. ${Math.round(refundSeconds / 60)} minute mein muqabil na mila to entry wapas.`,
+          en: `At this entry you only play a real opponent. No opponent in ${Math.round(refundSeconds / 60)} minutes and your entry is refunded.`,
+        }]
+      : []),
+    ...(entry && entry <= challengeMaxEntry
       ? [{
           icon: Hourglass,
           ur: `30 second mein muqabil na mila to Puzzle Challenge milega: ek puzzle, 100 second. Waqt par hal kiya to ${rs(prize)}, warna entry gayi.`,
@@ -78,7 +88,7 @@ export default function RulesSheet({ categoryId, categoryName, entry, prize, sec
           <div className="fee-win"><span>Jeetne wale ko ({Math.round((1 - rake) * 100)}%)</span><b>{rs(prize)}</b></div>
         </div>
       ) : null}
-      {puzzle && <PuzzleGuide kind={categoryId as Puzzle["kind"]} />}
+      {isPuzzleKind(categoryId) && <PuzzleGuide kind={categoryId} />}
       <div className="rules">
         {rules.map(({ icon: Icon, ur, en }) => (
           <div key={en} className="rule">

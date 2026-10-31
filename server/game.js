@@ -2,7 +2,7 @@
 // clients never see the correct answer until both players have answered (or time runs out).
 import crypto from "node:crypto";
 import * as db from "./db.js";
-import { CATEGORIES, prefetch, questionCount, questionsForMatch } from "./questions.js";
+import { CATEGORIES, prefetch, questionsForMatch } from "./questions.js";
 import { PUZZLE_KINDS, puzzleRound } from "./puzzles.js";
 
 export const QUESTIONS_PER_MATCH = 10;
@@ -18,7 +18,14 @@ export const FULL_POINTS_SHARE = 0.2;
 const LATE_SHARE = 0.6; // a right answer after 60% of the time (6s of 10s) counts as "late" for the prize review
 // Most questions get SECONDS_PER_QUESTION; logic puzzles carry their own time, set by how hard they are.
 const secondsFor = (q) => q.seconds ?? SECONDS_PER_QUESTION;
-export const ENTRY_TIERS = [20, 50, 100, 500];
+export const ENTRY_TIERS = [20, 50, 100, 500, 1000]; // quiz
+// Puzzles can be practised from a demo and solved quickly, so they stay small.
+export const PUZZLE_TIERS = [20, 50, 100];
+// The Puzzle Challenge (platform pays the prize) is only offered up to this entry. Bigger quiz entries wait for a
+// real opponent, and get their entry back after NO_OPPONENT_REFUND_MS.
+export const CHALLENGE_MAX_ENTRY = 100;
+export const NO_OPPONENT_REFUND_MS = 120_000;
+const tiersFor = (category) => (PUZZLE_KINDS.includes(category) ? PUZZLE_TIERS : ENTRY_TIERS);
 const GRACE_MS = 600; // network allowance on the answer deadline
 const REVEAL_MS = 1800;
 const PUZZLE_REVEAL_MS = 4000; // time to look at the solution before the next puzzle
@@ -57,7 +64,7 @@ const humans = (m) => m.players.filter((p) => !p.bot);
 
 export function joinQueue(socket, user, { category, entry }) {
   if (!CATEGORIES.some((c) => c.id === category)) return { error: "Category nahi mili" };
-  if (!ENTRY_TIERS.includes(entry)) return { error: "Ghalat entry fee" };
+  if (!tiersFor(category).includes(entry)) return { error: "Ghalat entry fee" };
   if (activeByUser.has(user.id)) return { error: "Aap pehle se match mein hain" };
   if (user.balance < entry) return { error: "Balance kam hai — pehle paise add karein" };
 
@@ -73,9 +80,19 @@ export function joinQueue(socket, user, { category, entry }) {
     startMatch({ mode: "paid", category, entry, a: { user: db.getUser(opp.userId), socket: opp.socket }, b: { user, socket }, since: opp.since });
     return { ok: true, balance: db.getUser(user.id).balance };
   }
-  q.push({ userId: user.id, socket, since: Date.now(), category, entry });
+  const waiting = { userId: user.id, socket, since: Date.now(), category, entry };
+  q.push(waiting);
   queues.set(key, q);
   activeByUser.set(user.id, "queue");
+  // no Puzzle Challenge above CHALLENGE_MAX_ENTRY: if nobody comes, the entry goes back
+  if (entry > CHALLENGE_MAX_ENTRY) {
+    setTimeout(() => {
+      if (!(queues.get(key) || []).includes(waiting)) return;
+      leaveQueue(user.id);
+      db.addTransaction(user.id, "refund", entry, "Muqabil nahi mila — entry wapas");
+      waiting.socket.emit("queue:cancelled", { reason: "2 minute mein muqabil nahi mila — entry wapas kar di gayi", balance: db.getUser(user.id).balance });
+    }, NO_OPPONENT_REFUND_MS);
+  }
   return { ok: true, waiting: true, balance: db.getUser(user.id).balance };
 }
 
@@ -105,12 +122,10 @@ export function startPractice(socket, user, { category }) {
   return { ok: true };
 }
 
-// "House" match: no real opponent showed up, so the app itself stakes the other side against a
-// computer player. The computer is always shown as "Computer" — never disguised as a person —
-// and plays at a fixed, published strength.
+// No real opponent showed up within 30s (entries up to CHALLENGE_MAX_ENTRY): a solo Puzzle Challenge.
 export function startChallenge(socket, user, { category, entry }) {
   if (!CATEGORIES.some((c) => c.id === category)) return { error: "Category nahi mili" };
-  if (!ENTRY_TIERS.includes(entry)) return { error: "Ghalat entry fee" };
+  if (!tiersFor(category).includes(entry) || entry > CHALLENGE_MAX_ENTRY) return { error: "Is entry par Puzzle Challenge nahi hai" };
   // only from the lobby, where the entry was already paid
   const waiting = [...queues.values()].flat().find((w) => w.userId === user.id);
   if (!waiting || activeByUser.get(user.id) !== "queue") return { error: "Pehle lobby mein shamil hon" };
@@ -128,15 +143,18 @@ const BOT_SKILL = {
 };
 const isPaid = (mode) => mode === "paid" || mode === "challenge";
 
-// Puzzle Challenge: nobody to play in 30s, so the player gets ONE hard puzzle and CHALLENGE_SECONDS to solve it.
-// Solved = the prize (paid by the platform); not solved = the entry stays with the platform. Left out: the maze
-// (too easy for 100s) and kinds whose level-1 puzzle needs well over 100s.
-const CHALLENGE_SECONDS = 100;
-const NOT_FOR_CHALLENGE = new Set(["maze", "sudoku", "futoshiki", "skyscraper", "crowns", "sunmoon"]);
-async function challengeRound() {
-  const kinds = PUZZLE_KINDS.filter((k) => !NOT_FOR_CHALLENGE.has(k));
-  const q = await puzzleRound(kinds[crypto.randomInt(kinds.length)], 1);
-  return { ...q, seconds: CHALLENGE_SECONDS };
+// Every puzzle match is ONE puzzle with PUZZLE_SECONDS: a 1v1 race, or the solo Puzzle Challenge (nobody to play
+// in 30s: solved = the prize, paid by the platform; not solved = the entry stays with the platform).
+// Level 1 of every kind is the tough board built for 100 seconds (server/puzzles.js).
+const PUZZLE_SECONDS = 100;
+async function puzzleMatchRound(kind) {
+  const q = await puzzleRound(kind, 1);
+  return { ...q, seconds: PUZZLE_SECONDS };
+}
+// The challenge takes any kind except the maze (too easy for 100s with the prize on it).
+function challengeRound() {
+  const kinds = PUZZLE_KINDS.filter((k) => k !== "maze");
+  return puzzleMatchRound(kinds[crypto.randomInt(kinds.length)]);
 }
 
 // since: when the first of these players entered the lobby (the 1-minute lobby limit counts from then)
@@ -164,8 +182,11 @@ function startMatch({ mode, category, entry, a, b, since = Date.now() }) {
   // other players still waiting in this category get their own research started
   if (categoryWaiting(category)) prefetch(category, QUESTIONS_PER_MATCH);
 
-  const want = mode === "challenge" ? 1 : questionCount(category, QUESTIONS_PER_MATCH);
-  (mode === "challenge" ? challengeRound().then((q) => [q]) : questionsForMatch(category, want, since + LOBBY_MAX_MS))
+  const puzzleMatch = mode === "challenge" || PUZZLE_KINDS.includes(category);
+  const want = puzzleMatch ? 1 : QUESTIONS_PER_MATCH;
+  (puzzleMatch
+    ? (mode === "challenge" ? challengeRound() : puzzleMatchRound(category)).then((q) => [q])
+    : questionsForMatch(category, want, since + LOBBY_MAX_MS))
     .catch((err) => {
       console.error("[game] could not prepare questions:", err);
       return [];

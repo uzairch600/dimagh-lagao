@@ -43,7 +43,7 @@ export default function CrownsBoard({ n, regions, marks, onTap }: Props) {
           (edge(i, r < n - 1 ? i + n : null) ? " bb" : "") +
           (bad.has(i) ? " clash" : "");
         return (
-          <Cell key={i} className={cls} style={{ background: COLORS[reg % COLORS.length] }} onClick={() => onTap?.(i)}>
+          <Cell key={i} data-cell={i} className={cls} style={{ background: COLORS[reg % COLORS.length] }} onClick={() => onTap?.(i)}>
             {marks[i] === 1 && <X size={14} strokeWidth={3} className="pz-x" />}
             {marks[i] === 2 && <Crown size={22} strokeWidth={2.4} className="pz-crown" />}
           </Cell>

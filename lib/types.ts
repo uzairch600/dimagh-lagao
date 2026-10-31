@@ -1,17 +1,38 @@
 export type Category = { id: string; name: string; urdu: string; icon: string; group: "quiz" | "puzzle" };
 
-// A puzzle board, as the server sends it (see server/puzzles.js).
+// A puzzle board, as the server sends it (see server/puzzles.js; the rules are in lib/puzzle-rules.js).
+// Cells are numbered row by row on an n x n grid.
 export type Puzzle =
   | { kind: "crowns"; n: number; regions: number[] }
   | { kind: "sunmoon"; n: number; givens: number[]; hints: [number, number, boolean][] }
   | { kind: "path"; n: number; numbers: [number, number][] }
-  | { kind: "maze"; n: number; open: number[]; start: number; end: number };
+  | { kind: "maze"; n: number; open: number[]; start: number; end: number }
+  | { kind: "oneline"; n: number; blocked: number[]; start: number }
+  | { kind: "link"; n: number; ends: [number, number][] }
+  | { kind: "sudoku"; n: number; box: [number, number]; givens: number[] }
+  | { kind: "futoshiki"; n: number; givens: number[]; signs: [number, number][] }
+  | { kind: "skyscraper"; n: number; givens: number[]; top: number[]; bottom: number[]; left: number[]; right: number[] }
+  | { kind: "lights"; n: number; on: number[] }
+  | { kind: "nonogram"; n: number; rows: number[][]; cols: number[][] }
+  | { kind: "hitori"; n: number; nums: number[] }
+  | { kind: "tents"; n: number; trees: number[]; rowCount: number[]; colCount: number[] }
+  | { kind: "akari"; n: number; cells: number[] }
+  | { kind: "slide"; n: number; tiles: number[] }
+  | { kind: "flood"; n: number; colors: number; grid: number[]; moves: number }
+  | { kind: "target"; n: number; nums: number[]; target: number }
+  | { kind: "words"; n: number; letters: string; words: string[]; theme: string }
+  | { kind: "pipes"; n: number; tiles: number[]; source: number }
+  | { kind: "balls"; n: number; cap: number; tubes: number[][] };
+export type PuzzleKind = Puzzle["kind"];
 export type Tier = { entry: number; prize: number };
 
 export type Config = {
   demoMode: boolean;
   categories: Category[];
-  tiers: Tier[];
+  tiers: Tier[]; // quiz entries
+  puzzleTiers: Tier[]; // puzzle entries (smaller)
+  challengeMaxEntry: number; // Puzzle Challenge only up to this entry
+  noOpponentRefundSeconds: number; // bigger entries: refund after this long without an opponent
   questions: number;
   seconds: number;
   rake: number;

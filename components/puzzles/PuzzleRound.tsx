@@ -1,18 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Undo2 } from "lucide-react";
+import { checkPuzzle } from "@/lib/puzzle-rules";
 import type { Puzzle } from "@/lib/types";
-import CrownsBoard, { crownConflicts } from "./CrownsBoard";
-import PathBoard from "./PathBoard";
-import SunMoonBoard, { sunmoonConflicts } from "./SunMoonBoard";
-
-export const PUZZLE_HELP: Record<Puzzle["kind"], string> = {
-  crowns: "Har row, har column aur har rang mein sirf ek taaj. Do taaj aapas mein na chhoo'ein — kone se bhi nahi. Ek tap = ✕, doosra tap = taaj.",
-  sunmoon: "Har row aur column mein aadhe suraj, aadhe chaand. Ek line mein 3 ek jaise nahi. = matlab dono same, × matlab dono alag.",
-  path: "1 se shuru karein aur numbers ko tarteeb se jorte hue har khana bharein. Ungli ya mouse se kheenchein.",
-  maze: "Rocket se jhande tak raasta kheenchein. Deewaron ke aar paar nahi ja sakte.",
-};
+import { PUZZLES } from "./registry";
 
 type Props = {
   puzzle: Puzzle;
@@ -21,79 +13,73 @@ type Props = {
   onSolve: (solution: number[]) => Promise<boolean>;
 };
 
+// One puzzle board in a match. The board is checked in the browser with the same rules the server uses, and sent
+// as soon as it is right; the server's answer is what counts.
 export default function PuzzleRound({ puzzle, solved, solution, onSolve }: Props) {
-  const n = puzzle.n;
-  const blank = () => (puzzle.kind === "sunmoon" ? [...puzzle.givens] : puzzle.kind === "crowns" ? new Array(n * n).fill(0) : []);
-  const [state, setState] = useState<number[]>(blank);
+  const def = PUZZLES[puzzle.kind];
+  const [state, setState] = useState(() => def.init(puzzle));
+  const [history, setHistory] = useState<unknown[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const done = solved || !!solution;
 
-  // what the player has built so far, as a solution the server can check (null = not complete yet)
-  const attempt = (() => {
-    if (puzzle.kind === "crowns") {
-      const crowns = state.map((m, i) => (m === 2 ? i : -1)).filter((i) => i >= 0);
-      return crowns.length === n && crownConflicts(n, puzzle.regions, state).size === 0 ? crowns : null;
-    }
-    if (puzzle.kind === "sunmoon") return state.every((v) => v !== -1) && sunmoonConflicts(n, puzzle.hints, state).size === 0 ? state : null;
-    if (puzzle.kind === "path") return state.length === n * n ? state : null;
-    return state[state.length - 1] === puzzle.end ? state : null;
-  })();
+  const attempt = def.attempt(puzzle, state);
   const key = attempt ? attempt.join(",") : "";
 
-  // sent as soon as the board is complete
   useEffect(() => {
     if (!attempt || done || sending) return;
+    if (!checkPuzzle(puzzle, attempt)) {
+      setMsg("Abhi sahi nahi — laal khane aur qawaid dobara dekhein");
+      return;
+    }
     setSending(true);
     onSolve(attempt).then((ok) => {
       setSending(false);
-      setMsg(ok ? null : puzzle.kind === "path" ? "Numbers tarteeb se nahi jure — dobara koshish karein" : "Abhi sahi nahi — qawaid dobara dekhein");
+      if (!ok) setMsg("Server ne qubool nahi kiya — dobara koshish karein");
     });
   }, [key]);
 
-  const tap = (i: number) => {
+  const set = (next: unknown) => {
     if (done) return;
     setMsg(null);
-    setState((s) => {
-      const next = [...s];
-      if (puzzle.kind === "crowns") next[i] = (next[i] + 1) % 3;
-      else next[i] = next[i] === -1 ? 0 : next[i] === 0 ? 1 : -1;
-      return next;
-    });
+    setHistory((h) => [...h.slice(-300), state]);
+    setState(next);
   };
-  const setPath = (p: number[]) => {
-    if (done) return;
+  const undo = () => {
+    if (!history.length) return;
     setMsg(null);
-    setState(p);
+    setState(history[history.length - 1]);
+    setHistory((h) => h.slice(0, -1));
+  };
+  const reset = () => {
+    setMsg(null);
+    setHistory((h) => [...h, state]);
+    setState(def.init(puzzle));
   };
 
   // after the round, the board shows the solution
-  let view = state;
-  if (solution && !solved) {
-    if (puzzle.kind === "crowns") view = Array.from({ length: n * n }, (_, i) => (solution.includes(i) ? 2 : 0));
-    else view = solution;
-  }
+  const view = solution && !solved ? def.shown(puzzle, solution) : state;
+  const Board = def.Board;
 
-  const live = !done;
   return (
-    <div className={`pz ${solved ? "pz-solved" : ""}`}>
-      <p className="pz-help">{PUZZLE_HELP[puzzle.kind]}</p>
+    <div className={`pz pz-${puzzle.kind} ${solved ? "pz-solved" : ""}`}>
+      <p className="pz-help">{def.goal}</p>
       <div className="pz-board">
-        {puzzle.kind === "crowns" && <CrownsBoard n={n} regions={puzzle.regions} marks={view} onTap={live ? tap : undefined} />}
-        {puzzle.kind === "sunmoon" && <SunMoonBoard n={n} givens={puzzle.givens} hints={puzzle.hints} values={view} onTap={live ? tap : undefined} />}
-        {puzzle.kind === "path" && <PathBoard n={n} numbers={puzzle.numbers} path={view} setPath={live ? setPath : undefined} />}
-        {puzzle.kind === "maze" && (
-          <PathBoard n={n} open={puzzle.open} start={puzzle.start} end={puzzle.end} path={view.length ? view : [puzzle.start]} setPath={live ? setPath : undefined} />
-        )}
+        <Board puzzle={puzzle} state={view} set={done ? undefined : set} />
       </div>
       <div className="pz-foot">
         <span className={`pz-msg ${msg ? "bad" : solved ? "good" : ""}`}>
           {solved ? "Hal ho gaya!" : msg ?? (solution ? "Waqt khatam — ye tha sahi hal" : sending ? "Check ho raha hai…" : "")}
         </span>
-        {live && (
-          <button className="btn btn-ghost btn-sm" onClick={() => { setState(blank()); setMsg(null); }}>
-            <RotateCcw size={15} /> Dobara
-          </button>
+        {!done && (
+          <span className="pz-tools">
+            <button className="btn btn-ghost btn-sm" onClick={undo} disabled={!history.length}>
+              <Undo2 size={15} /> Wapas
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={reset}>
+              <RotateCcw size={15} /> Dobara
+            </button>
+          </span>
         )}
       </div>
     </div>

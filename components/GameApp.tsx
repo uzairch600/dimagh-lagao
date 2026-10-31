@@ -143,7 +143,8 @@ export default function GameApp() {
     s.on("match:opponentLeft", ({ seconds }: { seconds: number }) => notify(`Muqabil ka connection gaya — ${seconds} second mein wapas na aaya to aap jeet jayenge`));
     s.on("match:opponentBack", () => notify("Muqabil wapas aa gaya"));
 
-    s.on("queue:cancelled", ({ reason }: { reason: string }) => {
+    s.on("queue:cancelled", ({ reason, balance }: { reason: string; balance?: number }) => {
+      if (typeof balance === "number") setUser((u) => (u ? { ...u, balance } : u));
       setSearching(null);
       setScreen("home");
       notify(reason, "error");
@@ -187,7 +188,7 @@ export default function GameApp() {
   };
 
   const joinQueue = (category: Category, entry: number) => {
-    const tier = config!.tiers.find((t) => t.entry === entry)!;
+    const tier = [...config!.tiers, ...config!.puzzleTiers].find((t) => t.entry === entry)!;
     setLastPlay({ category, entry });
     socketRef.current?.emit("queue:join", { category: category.id, entry }, (res: { error?: string; balance?: number }) => {
       if (res?.error) return notify(res.error, "error");
@@ -243,7 +244,7 @@ export default function GameApp() {
 
   // Every match starts from the rules screen; the player must tick "I agree".
   const showRules = (category: Category, entry: number | null) => {
-    const prize = entry ? config!.tiers.find((t) => t.entry === entry)?.prize ?? 0 : 0;
+    const prize = entry ? [...config!.tiers, ...config!.puzzleTiers].find((t) => t.entry === entry)?.prize ?? 0 : 0;
     setSheet(
       <RulesSheet
         categoryId={category.id}
@@ -252,6 +253,8 @@ export default function GameApp() {
         prize={prize}
         seconds={config!.seconds}
         rake={config!.rake}
+        challengeMaxEntry={config!.challengeMaxEntry}
+        refundSeconds={config!.noOpponentRefundSeconds}
         scoring={config!.scoring}
         onBack={() => openPlaySheet(category)}
         onStart={() => {
@@ -304,6 +307,8 @@ export default function GameApp() {
               <Searching
                 info={searching} name={user.name} avatar={user.avatar}
                 houseWaitSeconds={config.houseWaitSeconds}
+                challengeMaxEntry={config.challengeMaxEntry}
+                refundSeconds={config.noOpponentRefundSeconds}
                 onStartChallenge={startChallenge}
               />
             )}

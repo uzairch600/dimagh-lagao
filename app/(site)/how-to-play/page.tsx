@@ -38,7 +38,7 @@ export default function HowToPlay() {
                 <tr><th>Entry</th><th>Kul pot</th><th>Jeetne wale ko</th></tr>
               </thead>
               <tbody>
-                {[20, 50, 100, 500].map((e) => (
+                {[20, 50, 100, 500, 1000].map((e) => (
                   <tr key={e}>
                     <td>Rs {e}</td>
                     <td>Rs {e * 2}</td>
@@ -67,10 +67,11 @@ export default function HowToPlay() {
 
             <h2>Puzzles</h2>
             <p>
-              Khelein mein Quiz ke saath Puzzles ka hissa bhi hai: <b>Taaj</b>, <b>Suraj Chaand</b>, <b>Number Raasta</b> aur{" "}
-              <b>Bhool Bhulaiyan</b>. Dono players ko bilkul same 3 puzzles milte hain, chhote se bade. Board poora sahi hote hi
-              server check karta hai — jo jaldi hal kare us ke zyada points. Har puzzle ka waqt us ke size ke hisaab se 45 se 150
-              second hota hai. Match se pehle har puzzle ke qawaid aur ek hal kiya hua misaal dikhaya jata hai.
+              Khelein mein Quiz ke saath 20 puzzles bhi hain — <b>Taaj</b>, <b>Sudoku</b>, <b>Lafz Dhoondo</b>, <b>Gend Tarteeb</b>,{" "}
+              <b>Hisaab Jor</b>, <b>Pipe Jor</b> aur bohat se aur. Dono players ko bilkul same puzzle milta hai: 1 puzzle, 100
+              second. Board poora sahi hote hi server check karta hai — jo pehle hal kare wohi jeete. Har puzzle card par
+              &quot;Kaise khelein&quot; dabayein: ek haath puzzle hal kar ke dikhata hai, phir aap chhote puzzle par khud practice kar
+              sakte hain.
             </p>
 
             <h2>6. Inaam aur withdraw</h2>

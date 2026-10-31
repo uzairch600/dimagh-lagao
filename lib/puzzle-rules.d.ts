@@ -1,0 +1,28 @@
+import type { Puzzle } from "./types";
+
+export function isInts(x: unknown, len?: number): x is number[];
+export function neighbours(n: number, i: number): number[];
+export function isNext(n: number, a: number, b: number): boolean;
+export function touches(n: number, a: number, b: number): boolean;
+export function sunmoonOk(n: number, g: number[], i: number, hints: [number, number, boolean][]): boolean;
+export function mazeOpen(n: number, open: number[], i: number, j: number): boolean;
+export function splitLines(s: number[]): number[][];
+export function boxOf(n: number, box: [number, number], i: number): number;
+export function visible(line: number[]): number;
+export function skylineClues(n: number, v: number[]): { top: number[]; bottom: number[]; left: number[]; right: number[] };
+export function lightsAfter(n: number, on: number[], taps: number[]): number[];
+export function runs(cells: boolean[]): number[];
+export function nonogramClues(n: number, filled: Set<number>): { rows: number[][]; cols: number[][] };
+export const AKARI_WALL: 5;
+export function akariRays(n: number, cells: number[], i: number): number[];
+export function slideDone(tiles: number[]): boolean;
+export function floodPaint(n: number, grid: number[], color: number): number[];
+export const OPS: string[];
+export function applyOp(a: number, op: number, b: number): number | null;
+export function targetStep(list: number[], i: number, op: number, j: number): number[] | null;
+export function lineCells(n: number, a: number, b: number): number[] | null;
+export function turn(mask: number, times: number): number;
+export function pipesFlow(n: number, masks: number[], source: number): { wet: Set<number>; loose: Set<number> };
+export function ballsMove(tubes: number[][], cap: number, from: number, to: number): number[][] | null;
+export function ballsDone(tubes: number[][], cap: number): boolean;
+export function checkPuzzle(puzzle: Puzzle, s: number[]): boolean;

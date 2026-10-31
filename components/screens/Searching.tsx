@@ -11,6 +11,8 @@ type Props = {
   name: string;
   avatar: string;
   houseWaitSeconds: number;
+  challengeMaxEntry: number;
+  refundSeconds: number;
   onStartChallenge: () => void;
 };
 
@@ -24,11 +26,13 @@ const TIPS = [
 ];
 
 // The lobby. The entry is already paid and there is no way back from here.
-export default function Searching({ info, name, avatar, houseWaitSeconds, onStartChallenge }: Props) {
+export default function Searching({ info, name, avatar, houseWaitSeconds, challengeMaxEntry, refundSeconds, onStartChallenge }: Props) {
   const [secs, setSecs] = useState(0);
   const started = useRef(false);
   const practice = !!info.practice;
-  const left = Math.max(0, houseWaitSeconds - secs);
+  // above challengeMaxEntry there is no Puzzle Challenge: wait for a real opponent, refund after refundSeconds
+  const challenge = !practice && info.entry <= challengeMaxEntry;
+  const left = Math.max(0, (challenge ? houseWaitSeconds : refundSeconds) - secs);
   const tip = TIPS[Math.floor(secs / 6) % TIPS.length];
 
   useEffect(() => {
@@ -38,11 +42,11 @@ export default function Searching({ info, name, avatar, houseWaitSeconds, onStar
 
   // After the wait, a solo Puzzle Challenge starts instead (any entry).
   useEffect(() => {
-    if (!practice && left === 0 && !started.current) {
+    if (challenge && left === 0 && !started.current) {
       started.current = true;
       onStartChallenge();
     }
-  }, [practice, left, onStartChallenge]);
+  }, [challenge, left, onStartChallenge]);
 
   return (
     <section className="screen center-col searching">
@@ -67,16 +71,28 @@ export default function Searching({ info, name, avatar, houseWaitSeconds, onStar
           <div className="wait-count">
             <svg viewBox="0 0 44 44">
               <circle className="track" cx="22" cy="22" r="19" />
-              <circle className="bar" cx="22" cy="22" r="19" style={{ animationDuration: `${houseWaitSeconds}s` }} />
+              <circle className="bar" cx="22" cy="22" r="19" style={{ animationDuration: `${challenge ? houseWaitSeconds : refundSeconds}s` }} />
             </svg>
             <b>{left}</b>
           </div>
           <div>
-            <b>{left > 0 ? `${left} second mein player na mila…` : "Puzzle Challenge shuru ho raha hai"}</b>
-            <p>
-              …to aap ko <b>Puzzle Challenge</b> milega: ek puzzle, 100 second. Waqt par hal kiya to{" "}
-              <b>{rs(info.prize)}</b>, warna entry gayi.
-            </p>
+            {challenge ? (
+              <>
+                <b>{left > 0 ? `${left} second mein player na mila…` : "Puzzle Challenge shuru ho raha hai"}</b>
+                <p>
+                  …to aap ko <b>Puzzle Challenge</b> milega: ek puzzle, 100 second. Waqt par hal kiya to{" "}
+                  <b>{rs(info.prize)}</b>, warna entry gayi.
+                </p>
+              </>
+            ) : (
+              <>
+                <b>Sirf asli muqabil</b>
+                <p>
+                  {rs(info.entry)} ki entry par sirf asli player se match hota hai. {Math.ceil(left / 60)} minute mein koi na mila
+                  to <b>entry wapas</b> mil jayegi.
+                </p>
+              </>
+            )}
           </div>
           <Puzzle className="wait-bot" size={22} />
         </div>
