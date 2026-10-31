@@ -20,6 +20,7 @@ const secondsFor = (q) => q.seconds ?? SECONDS_PER_QUESTION;
 export const ENTRY_TIERS = [20, 50, 100, 500];
 const GRACE_MS = 600; // network allowance on the answer deadline
 const REVEAL_MS = 1800;
+const PUZZLE_REVEAL_MS = 4000; // time to look at the solution before the next puzzle
 const COUNTDOWN_MS = 3500;
 const RECONNECT_MS = 10_000; // a dropped player has this long to come back before forfeiting
 const STRIKE_GAP_MS = 1500; // blur + visibilitychange fire together: count them once
@@ -197,9 +198,14 @@ function cancelMatch(m, reason) {
 // Each player gets the options in their own random order, so two players can't compare "option B".
 function sendQuestion(m, p, secondsLeft) {
   const q = m.questions[m.index];
+  if (q.puzzle) {
+    p.socket?.emit("match:question", {
+      index: m.index, total: m.questions.length, text: "", options: [], seconds: secondsLeft ?? secondsFor(q), puzzle: q.puzzle,
+    });
+    return;
+  }
   p.socket?.emit("match:question", {
-    index: m.index, total: m.questions.length, text: q.text, options: p.perm.map((i) => q.options[i]),
-    seconds: secondsLeft ?? secondsFor(q), clues: q.clues, chart: q.chart,
+    index: m.index, total: m.questions.length, text: q.text, options: p.perm.map((i) => q.options[i]), seconds: secondsLeft ?? secondsFor(q),
   });
 }
 
@@ -222,9 +228,16 @@ function scheduleBot(m, bot) {
   // bot timings are tuned for a 10s question; longer puzzles stretch them
   const scale = secondsFor(m.questions[index]) / SECONDS_PER_QUESTION;
   const delay = (skill.minMs + Math.random() * (skill.maxMs - skill.minMs)) * scale;
+  const q = m.questions[index];
+  if (q.puzzle) {
+    if (Math.random() >= skill.accuracy) return; // this round the computer doesn't finish in time
+    setTimeout(() => {
+      if (!m.done && m.index === index) score(m, bot, index, true, null);
+    }, (0.3 + Math.random() * 0.6) * secondsFor(q) * 1000);
+    return;
+  }
   setTimeout(() => {
     if (m.done || m.index !== index) return;
-    const q = m.questions[index];
     const right = Math.random() < skill.accuracy;
     const wrongChoices = [0, 1, 2, 3].filter((i) => i !== q.answerIndex);
     record(m, bot, index, right ? q.answerIndex : wrongChoices[crypto.randomInt(3)]);
@@ -233,20 +246,44 @@ function scheduleBot(m, bot) {
 
 export function answer(userId, { matchId, index, choice }) {
   const m = matches.get(matchId);
-  if (!m || m.done) return;
+  if (!m || m.done || m.questions[m.index]?.puzzle) return;
   const p = m.players.find((x) => x.userId === userId);
   if (!p || !p.perm) return;
   if (!Number.isInteger(choice) || choice < 0 || choice > 3) return;
   record(m, p, index, p.perm[choice]); // translate the player's on-screen option back to the real one
 }
 
+// A puzzle solution from a player. The server checks it against the puzzle's rules; a wrong one can be fixed
+// and sent again (up to MAX_TRIES per puzzle).
+const MAX_TRIES = 40;
+export function solve(userId, { matchId, index, solution }) {
+  const m = matches.get(matchId);
+  if (!m || m.done || m.phase !== "question" || index !== m.index) return { ok: false };
+  const q = m.questions[index];
+  const p = m.players.find((x) => x.userId === userId);
+  if (!q?.puzzle || !p || p.answers[index]) return { ok: false };
+  p.tries = (p.tries || 0) + 1;
+  if (p.tries > MAX_TRIES * (index + 1)) return { ok: false, error: "Bohat zyada koshishen" };
+  let ok = false;
+  try {
+    ok = q.check(solution);
+  } catch {
+    ok = false;
+  }
+  if (ok) score(m, p, index, true, null);
+  return { ok };
+}
+
 // `choice` is always the canonical option index here.
 function record(m, p, index, choice) {
+  score(m, p, index, choice === m.questions[index].answerIndex, choice);
+}
+
+function score(m, p, index, correct, choice) {
   if (m.phase !== "question" || index !== m.index || p.answers[index]) return;
   const elapsed = Date.now() - m.askedAt;
   const limit = secondsFor(m.questions[index]) * 1000;
   if (elapsed > limit + GRACE_MS) return;
-  const correct = choice === m.questions[index].answerIndex;
   const points = correct ? speedPoints(elapsed, limit) : 0;
   p.answers[index] = { choice, correct, points, ms: elapsed, limit };
   p.score += points;
@@ -279,12 +316,13 @@ function reveal(m) {
     const mine = (canonical) => (canonical == null ? null : p.perm.indexOf(canonical));
     p.socket?.emit("match:reveal", {
       index: i,
-      answerIndex: mine(q.answerIndex),
+      answerIndex: q.puzzle ? null : mine(q.answerIndex),
+      solution: q.puzzle ? q.solution : undefined,
       you: { choice: mine(p.answers[i]?.choice), points: p.answers[i]?.points ?? 0, score: p.score },
       opponent: { choice: mine(opp.answers[i]?.choice), points: opp.answers[i]?.points ?? 0, score: opp.score },
     });
   }
-  m.timer = setTimeout(() => ask(m), REVEAL_MS);
+  m.timer = setTimeout(() => ask(m), q.puzzle ? PUZZLE_REVEAL_MS : REVEAL_MS);
 }
 
 // opts.winner: force a winner (forfeit). opts.void: nobody wins, every entry is refunded.

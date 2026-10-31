@@ -4,7 +4,7 @@ import { useState } from "react";
 import { DoorClosed, Eye, Gauge, ShieldAlert, Timer, Wifi } from "lucide-react";
 import PuzzleGuide from "./PuzzleGuide";
 import { rs } from "@/lib/api";
-import type { Config } from "@/lib/types";
+import type { Config, Puzzle } from "@/lib/types";
 
 type Props = {
   categoryId: string;
@@ -22,7 +22,7 @@ type Props = {
 export default function RulesSheet({ categoryId, categoryName, entry, prize, seconds, rake, scoring, onStart, onBack }: Props) {
   const [agree, setAgree] = useState(false);
   const fullSecs = scoring.fullMs / 1000;
-  const puzzle = categoryId === "puzzle";
+  const puzzle = ["crowns", "sunmoon", "path", "maze"].includes(categoryId);
   const rules = [
     {
       icon: DoorClosed,
@@ -30,13 +30,13 @@ export default function RulesSheet({ categoryId, categoryName, entry, prize, sec
       en: entry ? "No leaving after Start. Leave the lobby or match and you lose the entry; the opponent wins." : "No leaving after Start. Leaving counts as a loss.",
     },
     puzzle
-      ? { icon: Timer, ur: "5 puzzles. Har puzzle ka apna waqt hai — jitna mushkil, utna zyada (20 se 75 second). Waqt screen par dikhta hai.", en: "5 puzzles. Each has its own time based on how hard it is (20-75 seconds)." }
+      ? { icon: Timer, ur: "3 puzzles, chhote se bade. Har puzzle ka waqt us ke size ke hisaab se (45 se 150 second) screen par dikhta hai.", en: "3 puzzles, small to big. Each has its own time based on its size (45-150 seconds)." }
       : { icon: Timer, ur: `Har sawal ke liye sirf ${seconds} second.`, en: `${seconds} seconds per question.` },
     puzzle
       ? {
           icon: Gauge,
-          ur: `Pehle 20% waqt mein sahi jawab = ${scoring.max} points, phir kam hote hote aakhri second par ${scoring.min}. Ghalat jawab = 0.`,
-          en: `A right answer in the first 20% of the time scores ${scoring.max}, falling to ${scoring.min} at the last second. Wrong = 0.`,
+          ur: `Jitna jaldi hal, utne zyada points: pehle 20% waqt mein ${scoring.max}, phir kam hote hote aakhri second par ${scoring.min}. Hal na hua = 0. Dono players ko bilkul same puzzle milta hai.`,
+          en: `Solve faster, score more: ${scoring.max} in the first 20% of the time, down to ${scoring.min} at the end. Not solved = 0. Both players get the same puzzle.`,
         }
       : {
           icon: Gauge,
@@ -71,7 +71,7 @@ export default function RulesSheet({ categoryId, categoryName, entry, prize, sec
           <div className="fee-win"><span>Jeetne wale ko ({Math.round((1 - rake) * 100)}%)</span><b>{rs(prize)}</b></div>
         </div>
       ) : null}
-      {puzzle && <PuzzleGuide />}
+      {puzzle && <PuzzleGuide kind={categoryId as Puzzle["kind"]} />}
       <div className="rules">
         {rules.map(({ icon: Icon, ur, en }) => (
           <div key={en} className="rule">

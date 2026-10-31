@@ -1,4 +1,11 @@
-export type Category = { id: string; name: string; urdu: string; icon: string };
+export type Category = { id: string; name: string; urdu: string; icon: string; group: "quiz" | "puzzle" };
+
+// A puzzle board, as the server sends it (see server/puzzles.js).
+export type Puzzle =
+  | { kind: "crowns"; n: number; regions: number[] }
+  | { kind: "sunmoon"; n: number; givens: number[]; hints: [number, number, boolean][] }
+  | { kind: "path"; n: number; numbers: [number, number][] }
+  | { kind: "maze"; n: number; open: number[]; start: number; end: number };
 export type Tier = { entry: number; prize: number };
 
 export type Config = {
@@ -72,13 +79,13 @@ export type Question = {
   text: string;
   options: string[];
   seconds: number;
-  clues?: string[]; // logic puzzles only
-  chart?: { rows: string[]; cols: string[] }[]; // logic puzzles only: the notes chart
+  puzzle?: Puzzle; // puzzle rounds: a board instead of options
 };
 
 export type Reveal = {
   index: number;
-  answerIndex: number;
+  answerIndex: number | null;
+  solution?: number[]; // puzzle rounds: the generated solution
   you: { choice: number | null; points: number; score: number };
   opponent: { choice: number | null; points: number; score: number };
 };

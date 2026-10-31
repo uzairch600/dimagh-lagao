@@ -1,48 +1,85 @@
-import { Check, X } from "lucide-react";
+import type { Puzzle } from "@/lib/types";
+import CrownsBoard from "../puzzles/CrownsBoard";
+import PathBoard from "../puzzles/PathBoard";
+import SunMoonBoard from "../puzzles/SunMoonBoard";
 
-// How to solve a logic puzzle, shown on the rules screen before a puzzle match.
-const WORDS: [string, string][] = [
-  ["House 1, 2, 3…", "Ghar left se right ginay jaate hain. House 1 sab se left hai."],
-  ["directly left of", "bilkul saath wala left ghar (Dog directly left of Owl = Dog 2, Owl 3)"],
-  ["somewhere left of", "left mein kahin bhi, saath hona zaroori nahi"],
-  ["neighbours", "dono saath saath gharon mein"],
-  ["between", "dono ke darmiyan kisi ghar mein"],
-  ["end houses", "pehla ya aakhri ghar"],
-  ["either A or B", "in dono mein se koi ek"],
-];
+// How each puzzle works, with a small solved example. Shown on the rules screen before a puzzle match.
+const GUIDES: Record<Puzzle["kind"], { rules: string[]; how: string; example: React.ReactNode }> = {
+  crowns: {
+    rules: [
+      "Har row mein sirf ek taaj.",
+      "Har column mein sirf ek taaj.",
+      "Har rang ke hisse mein sirf ek taaj.",
+      "Do taaj aapas mein nahi chhoo sakte — kone (diagonal) se bhi nahi.",
+    ],
+    how: "Khane par ek tap = ✕ (yahan taaj nahi ho sakta), doosra tap = taaj, teesra tap = khaali. Qawaid toote to khana laal ho jata hai.",
+    example: (
+      <CrownsBoard n={4} regions={[0, 0, 1, 1, 0, 0, 1, 1, 2, 2, 3, 1, 2, 2, 3, 3]} marks={[0, 2, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 2, 0]} />
+    ),
+  },
+  sunmoon: {
+    rules: [
+      "Har khane mein suraj ya chaand.",
+      "Har row aur har column mein aadhe suraj, aadhe chaand.",
+      "Ek line mein 3 suraj ya 3 chaand saath saath nahi.",
+      "= ka matlab dono khane same, × ka matlab dono alag.",
+    ],
+    how: "Khaali khane par tap: suraj → chaand → khaali. Halke rang wale khane pehle se bhare hain, badle nahi ja sakte.",
+    example: (
+      <SunMoonBoard
+        n={4}
+        givens={new Array(16).fill(-1)}
+        hints={[[0, 1, false], [5, 6, true]]}
+        values={[0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0]}
+      />
+    ),
+  },
+  path: {
+    rules: [
+      "Raasta 1 se shuru ho kar aakhri number par khatam ho.",
+      "Numbers tarteeb se aayein: 1, phir 2, phir 3…",
+      "Har khane se raasta sirf ek dafa guzre — koi khana khaali na rahe.",
+      "Raasta sirf upar, neeche, daayen, baayen chalta hai (tircha nahi).",
+    ],
+    how: "1 par ungli rakhein aur kheenchte jayein. Peechhe le jaane se raasta mit jata hai. Kisi purane khane par tap karein to raasta wahin tak reh jata hai.",
+    example: <PathBoard n={3} numbers={[[0, 1], [2, 2], [8, 3]]} path={[0, 1, 2, 5, 4, 3, 6, 7, 8]} />,
+  },
+  maze: {
+    rules: ["Rocket se shuru karein aur jhande tak pohanchein.", "Deewaron ke aar paar nahi ja sakte."],
+    how: "Rocket se ungli kheenchte hue raasta banayein. Ghalat gali mein gaye to peechhe kheench lein.",
+    example: (
+      <PathBoard
+        n={4}
+        open={[1, 1, 1, 2, 3, 1, 1, 0, 3, 1, 1, 0, 1, 1, 1, 0]}
+        start={0}
+        end={15}
+        path={[0, 1, 2, 3, 7, 6, 5, 4, 8, 12, 13, 14, 15]}
+      />
+    ),
+  },
+};
 
-export default function PuzzleGuide() {
+export default function PuzzleGuide({ kind }: { kind: Puzzle["kind"] }) {
+  const g = GUIDES[kind];
   return (
     <details className="puzzle-guide" open>
-      <summary>Puzzle kaise hal karein · Guide</summary>
-      <ol className="guide-steps">
-        <li>Har puzzle mein 4 ya 5 janwar hain. Kuch suragh (clues) diye hote hain — sab sach hain.</li>
-        <li>Sirf ek hi tarteeb sab suraghon par poori utarti hai. Usi se sawal ka jawab nikalta hai.</li>
-        <li>
-          Neeche <b>Notes chart</b> hai: cell par tap karein — <X size={12} strokeWidth={3} /> = ye nahi ho sakta,{" "}
-          <Check size={12} strokeWidth={3} /> = pakka. Har row aur column mein sirf ek <Check size={12} strokeWidth={3} /> hota hai.
-        </li>
-        <li>Pehle seedhe suragh lagayein (&quot;lives in house 2&quot;, &quot;does not eat fish&quot;), phir baqi.</li>
-      </ol>
-
-      <div className="guide-words">
-        {WORDS.map(([en, ur]) => (
-          <div key={en}>
-            <b>{en}</b>
-            <span>{ur}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="guide-example">
-        <p className="ex-head">Misaal · Example (3 ghar)</p>
-        <p>1. The owl does not live in an end house.</p>
-        <p>2. The cat lives somewhere left of the dog.</p>
-        <p className="ex-q">Who lives in house 3?</p>
-        <p className="ex-a">
-          Hal: Owl end par nahi, to Owl = House 2. Cat dog ke left mein hai, to Cat = House 1 aur Dog = House 3. Jawab:{" "}
-          <b>Dog</b>.
-        </p>
+      <summary>Kaise khelein · Guide</summary>
+      <div className="guide-body">
+        <div>
+          <p className="guide-label">Qawaid</p>
+          <ol className="guide-steps">
+            {g.rules.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ol>
+          <p className="guide-label">Khelna</p>
+          <p className="guide-how">{g.how}</p>
+          <p className="guide-how">Board poora sahi hote hi khud check ho jata hai. Jo pehle hal kare, us ke zyada points.</p>
+        </div>
+        <div className="guide-example">
+          <p className="ex-head">Misaal (hal kiya hua)</p>
+          {g.example}
+        </div>
       </div>
     </details>
   );

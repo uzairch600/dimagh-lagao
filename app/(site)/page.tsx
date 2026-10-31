@@ -12,7 +12,10 @@ const CATEGORIES = [
   { id: "it", name: "IT & Computers", desc: "Computer, internet, coding" },
   { id: "ai", name: "AI", desc: "Machine learning, robots" },
   { id: "entertainment", name: "Entertainment", desc: "Films, dramas, music" },
-  { id: "puzzle", name: "Logic Puzzle", desc: "Janwar, ghar aur suragh" },
+  { id: "crowns", name: "Taaj (puzzle)", desc: "Har row, column aur rang mein ek taaj" },
+  { id: "sunmoon", name: "Suraj Chaand (puzzle)", desc: "Suraj aur chaand ka sahi jor" },
+  { id: "path", name: "Number Raasta (puzzle)", desc: "1, 2, 3… jorein, har khana bharein" },
+  { id: "maze", name: "Bhool Bhulaiyan (puzzle)", desc: "Rocket ko jhande tak pohanchayein" },
 ];
 
 const STEPS = [
@@ -45,7 +48,7 @@ export default function Landing() {
               <span className="grad-gold">inaam jeeto.</span>
             </h1>
             <p className="lead">
-              Asli players ke saath live quiz battle. Pakistan aur duniya ki GK, cricket, science, IT, AI, entertainment aur logic puzzles — jo sahi aur sab se tez jawab de,
+              Asli players ke saath live quiz battle. Pakistan aur duniya ki GK, cricket, science, IT, AI, entertainment, aur 1v1 puzzles — jo sahi aur sab se tez jawab de,
               wohi jeete. <b>Rs 700 tak</b> ek match mein.
             </p>
             <div className="hero-ctas">

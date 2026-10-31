@@ -109,7 +109,7 @@ export default function GameApp() {
     s.on("match:opponentAnswered", () => setMatch((m) => (m ? { ...m, oppAnswered: true } : m)));
 
     s.on("match:reveal", (r: Reveal) => {
-      const ok = r.you.choice === r.answerIndex;
+      const ok = r.you.points > 0;
       if (ok) sfx.correct();
       else sfx.wrong();
       setMatch((m) => {
@@ -215,6 +215,20 @@ export default function GameApp() {
     });
   };
 
+  // puzzle rounds: the server checks the board and says whether it is solved
+  const solve = (solution: number[]) =>
+    new Promise<boolean>((resolve) => {
+      if (!match?.question) return resolve(false);
+      const { matchId } = match.found;
+      socketRef.current?.emit("match:solve", { matchId, index: match.question.index, solution }, (res: { ok: boolean }) => {
+        if (res?.ok) {
+          sfx.correct();
+          setMatch((m) => (m ? { ...m, myChoice: 0 } : m));
+        }
+        resolve(!!res?.ok);
+      });
+    });
+
   const answer = (choice: number) => {
     if (!match?.question || match.myChoice !== null || match.reveal) return;
     sfx.tap();
@@ -294,7 +308,7 @@ export default function GameApp() {
               />
             )}
             {screen === "versus" && match && <Versus found={match.found} />}
-            {screen === "match" && match && <Match state={match} onAnswer={answer} />}
+            {screen === "match" && match && <Match state={match} onAnswer={answer} onSolve={solve} />}
             {screen === "result" && end && <Result end={end} user={user} found={match?.found ?? null} onAgain={playAgain} onHome={() => go("home")} />}
             {screen === "wallet" && <Wallet user={user} config={config} setSheet={setSheet} notify={notify} refreshMe={refreshMe} />}
             {screen === "leaderboard" && <Leaderboard me={user} />}

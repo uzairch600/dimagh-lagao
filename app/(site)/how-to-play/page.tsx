@@ -66,12 +66,12 @@ export default function HowToPlay() {
             </ul>
             <p>10 sawal ke baad jiske points zyada, wohi jeeta. Barabar points par dono ki entry wapas.</p>
 
-            <h2>Logic Puzzle category</h2>
+            <h2>Puzzles</h2>
             <p>
-              Is category mein 5 puzzles hote hain. Har puzzle mein 4-5 janwar, kuch suragh (clues) aur ek sawal hota hai — jaise
-              &quot;House 3 mein kaun rehta hai?&quot; ya &quot;Machli kaun khata hai?&quot;. Sirf ek hi tarteeb sab suraghon par poori
-              utarti hai. Har puzzle ka waqt us ki mushkil ke hisaab se 20 se 75 second hota hai, aur screen par ek notes chart hota
-              hai jis par aap tap karke nishaan laga sakte hain. Match se pehle poori guide aur ek hal kiya hua misaal dikhaya jata hai.
+              Khelein mein Quiz ke saath Puzzles ka hissa bhi hai: <b>Taaj</b>, <b>Suraj Chaand</b>, <b>Number Raasta</b> aur{" "}
+              <b>Bhool Bhulaiyan</b>. Dono players ko bilkul same 3 puzzles milte hain, chhote se bade. Board poora sahi hote hi
+              server check karta hai — jo jaldi hal kare us ke zyada points. Har puzzle ka waqt us ke size ke hisaab se 45 se 150
+              second hota hai. Match se pehle har puzzle ke qawaid aur ek hal kiya hua misaal dikhaya jata hai.
             </p>
 
             <h2>6. Inaam aur withdraw</h2>

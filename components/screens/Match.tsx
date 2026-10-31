@@ -6,12 +6,14 @@ import { sfx } from "@/lib/sound";
 import type { MatchState } from "../GameApp";
 import Avatar from "../Avatar";
 import CanvasText from "../CanvasText";
-import NotesChart, { Clues } from "../PuzzleBoard";
+import PuzzleRound from "../puzzles/PuzzleRound";
 
 const KEYS = ["A", "B", "C", "D"];
 const isMath = (t: string) => /^[\d\s+−×÷=?]+$/.test(t);
 
-export default function Match({ state, onAnswer }: { state: MatchState; onAnswer: (i: number) => void }) {
+type Props = { state: MatchState; onAnswer: (i: number) => void; onSolve: (solution: number[]) => Promise<boolean> };
+
+export default function Match({ state, onAnswer, onSolve }: Props) {
   const { found, question: q, reveal, myChoice, oppAnswered, results, scores } = state;
   const [left, setLeft] = useState(q?.seconds ?? found.seconds);
   // matches the 1024px breakpoint in globals.css
@@ -34,7 +36,7 @@ export default function Match({ state, onAnswer }: { state: MatchState; onAnswer
 
   const low = left <= 3 && !reveal;
   const myPoints = reveal?.you.points ?? 0;
-  const puzzle = !!q?.clues?.length;
+
 
   return (
     <section className="screen no-select">
@@ -81,26 +83,34 @@ export default function Match({ state, onAnswer }: { state: MatchState; onAnswer
         <div className="q-card card glass">
           <h2>Tayyar ho jayein…</h2>
         </div>
+      ) : q.puzzle ? (
+        <>
+          <p className="q-count pz-count">
+            Puzzle {q.index + 1}/{q.total}
+            {oppAnswered && !reveal && <span className="opp-done"> • Muqabil ne hal kar liya!</span>}
+          </p>
+          <PuzzleRound key={q.index} puzzle={q.puzzle} solved={myChoice !== null} solution={reveal?.solution} onSolve={onSolve} />
+          <p className={`points-pop ${reveal ? "show" : ""}`} style={{ color: myPoints ? "var(--green)" : "var(--red)" }}>
+            {reveal ? (myPoints ? `+${myPoints} points` : "Is puzzle par 0 points") : myChoice !== null ? <span className="muted">Muqabil ka intezar…</span> : ""}
+          </p>
+        </>
       ) : (
         <>
-          <div className={`q-card card glass ${puzzle ? "puzzle-card" : ""}`} key={q.index}>
+          <div className="q-card card glass" key={q.index}>
             <p className="q-count">
-              {puzzle ? "Puzzle" : "Sawal"} {q.index + 1}/{q.total}
+              Sawal {q.index + 1}/{q.total}
             </p>
-            {puzzle && <Clues clues={q.clues!} wide={wide} />}
             {/* drawn on a canvas so it can't be copied or read by page tools */}
             <div className="q-text">
               {isMath(q.text) ? (
                 <CanvasText text={q.text} size={40} weight={800} align="center" />
               ) : (
-                <CanvasText text={q.text} size={puzzle ? (wide ? 22 : 18) : wide ? 26 : 21} align="center" />
+                <CanvasText text={q.text} size={wide ? 26 : 21} align="center" />
               )}
             </div>
           </div>
 
-          {puzzle && q.chart && <NotesChart key={`n${q.index}`} charts={q.chart} />}
-
-          <div className={`options ${puzzle ? "puzzle-opts" : ""}`} key={`o${q.index}`}>
+          <div className="options" key={`o${q.index}`}>
             {q.options.map((opt, i) => {
               let cls = "option";
               if (reveal) {

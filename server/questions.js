@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { PUZZLES_PER_MATCH, puzzleQuestion } from "./puzzles.js";
+import { PUZZLES_PER_MATCH, PUZZLE_KINDS, puzzleRound } from "./puzzles.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
@@ -16,22 +16,26 @@ const MODEL = "claude-haiku-5-5";
 const POOL_FILE = path.join(DATA_DIR, "questions.json");
 const BATCH_SIZE = 25;
 
+// group "quiz": multiple-choice questions. group "puzzle": a puzzle board both players solve (server/puzzles.js).
 export const CATEGORIES = [
-  { id: "world", name: "World GK", urdu: "معلومات عامہ" },
-  { id: "cricket", name: "Cricket", urdu: "کرکٹ" },
-  { id: "science", name: "Science", urdu: "سائنس" },
-  { id: "math", name: "Math Speed", urdu: "حساب" },
-  { id: "it", name: "IT & Computers", urdu: "کمپیوٹر" },
-  { id: "ai", name: "AI", urdu: "مصنوعی ذہانت" },
-  { id: "entertainment", name: "Entertainment", urdu: "تفریح" },
-  { id: "puzzle", name: "Logic Puzzle", urdu: "پہیلی" },
+  { id: "world", name: "World GK", urdu: "معلومات عامہ", group: "quiz" },
+  { id: "cricket", name: "Cricket", urdu: "کرکٹ", group: "quiz" },
+  { id: "science", name: "Science", urdu: "سائنس", group: "quiz" },
+  { id: "math", name: "Math Speed", urdu: "حساب", group: "quiz" },
+  { id: "it", name: "IT & Computers", urdu: "کمپیوٹر", group: "quiz" },
+  { id: "ai", name: "AI", urdu: "مصنوعی ذہانت", group: "quiz" },
+  { id: "entertainment", name: "Entertainment", urdu: "تفریح", group: "quiz" },
+  { id: "crowns", name: "Taaj", urdu: "تاج", group: "puzzle" },
+  { id: "sunmoon", name: "Suraj Chaand", urdu: "سورج چاند", group: "puzzle" },
+  { id: "path", name: "Number Raasta", urdu: "راستہ", group: "puzzle" },
+  { id: "maze", name: "Bhool Bhulaiyan", urdu: "بھول بھلیاں", group: "puzzle" },
 ];
 
 // Categories made on the server without AI (no prefetch, no pool, never repeat).
-const LOCAL = new Set(["math", "puzzle"]);
+const LOCAL = new Set(["math", ...PUZZLE_KINDS]);
 
-// Logic puzzles take longer each, so a puzzle match has fewer of them.
-export const questionCount = (category, normal) => (category === "puzzle" ? PUZZLES_PER_MATCH : normal);
+// Puzzles take longer each, so a puzzle match has fewer of them.
+export const questionCount = (category, normal) => (PUZZLE_KINDS.includes(category) ? PUZZLES_PER_MATCH : normal);
 
 // Rotating sub-topics keep AI batches varied instead of 300 versions of the same 20 facts.
 const SUBTOPICS = {
@@ -479,7 +483,11 @@ export function prefetch(category, count) {
 // background and its questions stay in the pool for later matches.
 export async function questionsForMatch(category, count, deadlineAt = Infinity) {
   if (category === "math") return Array.from({ length: count }, (_, i) => mathQuestion(i));
-  if (category === "puzzle") return Array.from({ length: count }, (_, i) => puzzleQuestion(i));
+  if (PUZZLE_KINDS.includes(category)) {
+    const rounds = [];
+    for (let i = 0; i < count; i++) rounds.push(await puzzleRound(category, i));
+    return rounds;
+  }
   const started = Date.now();
   const run = prepared.get(category) ?? produce(category, count);
   prepared.delete(category);
