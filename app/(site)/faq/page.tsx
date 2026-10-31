@@ -5,7 +5,7 @@ import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "FAQ",
-  description: "Dimagh Lagao ke baare mein aam sawal — account, paise, withdraw, computer opponent, fair play.",
+  description: "Dimagh Lagao ke baare mein aam sawal — account, paise, withdraw, Puzzle Challenge, fair play.",
 };
 
 const FAQS: { q: string; a: React.ReactNode }[] = [
@@ -13,8 +13,7 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
   { q: "Kya ye jua hai?", a: "Nahi. Yahan koi dice, card ya spin nahi. Nateeja sirf aap ke ilm aur raftar par hai — dono players ko bilkul same sawal milte hain." },
   { q: "Kaun khel sakta hai?", a: `Pakistan mein rehne wala koi bhi ${SITE.minAge} saal ya us se zyada umar ka shakhs. Ek insaan, ek account.` },
   { q: "Kitne ka match hota hai?", a: "Entry Rs 20, 50, 100 ya 500. Jeetne wale ko dono entries ka pot milta hai, 30% platform fee kaat kar — maslan Rs 50 entry par pot Rs 100, jeetne wale ko Rs 70." },
-  { q: "Agar koi muqabil na mile to?", a: "30 second tak asli player dhoonda jata hai. Na mile to app khud \"Computer\" ban kar aap ke saath khelti hai (har entry par) aur aap ke muqable mein utni hi raqam lagati hai. Computer hamesha saaf naam aur robot icon ke saath dikhta hai — kabhi insaan ban kar nahi." },
-  { q: "Computer kitna strong hai?", a: "Computer har player ke liye ek jaisa hai — taqreeban 65% sawal sahi karta hai aur 2.5 se 8.5 second mein jawab deta hai. Tafseel Fair Play page par hai." },
+  { q: "Agar koi muqabil na mile to?", a: "30 second tak asli player dhoonda jata hai. Na mile to aap ko Puzzle Challenge milta hai: ek puzzle, 100 second. Waqt par hal kiya to match ka poora inaam aap ka, warna entry gayi. Paid quiz hamesha do insaanon ke beech hota hai." },
   { q: "Draw ho jaye to?", a: "Dono players ki poori entry wapas wallet mein aa jati hai." },
   { q: "Paise kaise nikalein?", a: "Wallet → Nikalwayein. Easypaisa, JazzCash ya bank account chunein. Kam az kam Rs 200. Pehli dafa CNIC verification ho sakti hai." },
   { q: "Mera inaam review mein kyun hai?", a: "Agar jeetne wale ke jawabon ka pattern ghair-mamooli ho (maslan taqreeban sab sahi magar har jawab der se, ya har match mein bilkul ek jaisi timing), to inaam foran dene ke bajaye review ke baad diya jata hai. Saaf jeet ka inaam foran wallet mein aata hai." },

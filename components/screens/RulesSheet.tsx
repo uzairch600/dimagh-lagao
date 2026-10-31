@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DoorClosed, Eye, Gauge, ShieldAlert, Timer, Wifi } from "lucide-react";
+import { DoorClosed, Eye, Gauge, Hourglass, ShieldAlert, Timer, Wifi } from "lucide-react";
 import PuzzleGuide from "./PuzzleGuide";
 import { rs } from "@/lib/api";
 import type { Config, Puzzle } from "@/lib/types";
@@ -43,6 +43,13 @@ export default function RulesSheet({ categoryId, categoryName, entry, prize, sec
           ur: `Jitna tez sahi jawab, utne zyada points: ${fullSecs} second tak ${scoring.max}, phir kam hote hote aakhri second par ${scoring.min}. Ghalat jawab = 0.`,
           en: `Faster right answers score more: ${scoring.max} points up to ${fullSecs}s, falling to ${scoring.min} at the last second. Wrong = 0.`,
         },
+    ...(entry
+      ? [{
+          icon: Hourglass,
+          ur: `30 second mein muqabil na mila to Puzzle Challenge milega: ek puzzle, 100 second. Waqt par hal kiya to ${rs(prize)}, warna entry gayi.`,
+          en: `No opponent in 30s? You get a Puzzle Challenge: one puzzle, 100 seconds. Solve it in time to win ${rs(prize)}, otherwise you lose the entry.`,
+        }]
+      : []),
     {
       icon: Eye,
       ur: "Tab ya window badalna, full screen se nikalna, devtools kholna ya extensions chalana cheating hai.",

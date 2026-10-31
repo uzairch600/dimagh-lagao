@@ -72,7 +72,7 @@ export default function Landing() {
               <Trophy size={18} /> <span><b>+Rs 70</b> jeeta</span>
             </div>
             <div className="float-card fc2">
-              <Bot size={18} /> <span>30s mein player na mile to <b>app khelegi</b></span>
+              <Bot size={18} /> <span>30s mein player na mile to <b>Puzzle Challenge</b></span>
             </div>
           </div>
         </div>

@@ -52,9 +52,8 @@ export default function HowToPlay() {
             <h2>4. Muqabil se match</h2>
             <p>
               App aap ko usi category aur usi entry wale kisi asli player se milaati hai. Start dabate hi entry fee kat jati hai aur
-              lobby se wapsi nahi hoti. Agar <b>30 second</b> mein koi player na mile, to app khud <b>&quot;Computer&quot;</b> ban kar aap ke saath
-              khelti hai aur aap ke muqable mein utni hi raqam lagati hai (har entry par). Computer hamesha
-              &quot;Computer&quot; naam aur robot icon ke saath dikhta hai.
+              lobby se wapsi nahi hoti. Agar <b>30 second</b> mein koi player na mile, to aap ko <b>Puzzle Challenge</b> milta hai: ek puzzle aur
+              100 second. Waqt par hal kiya to match ka poora inaam aap ka, warna entry gayi.
             </p>
 
             <h2>5. Scoring</h2>

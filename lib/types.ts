@@ -46,7 +46,7 @@ export type Withdrawal = { id: string; txId: string; amount: number; method: str
 
 export type MatchSummary = {
   id: string;
-  mode: "paid" | "house" | "practice";
+  mode: "paid" | "challenge" | "practice";
   category: string;
   entry: number;
   prize: number;
@@ -61,7 +61,7 @@ export type PlayerInfo = { name: string; avatar: string; bot?: boolean; score?: 
 
 export type MatchFound = {
   matchId: string;
-  mode: "paid" | "house" | "practice";
+  mode: "paid" | "challenge" | "practice";
   category: string;
   entry: number;
   prize: number;
@@ -91,7 +91,7 @@ export type Reveal = {
 };
 
 export type MatchEnd = {
-  mode: "paid" | "house" | "practice";
+  mode: "paid" | "challenge" | "practice";
   outcome: "win" | "loss" | "draw";
   prize: number;
   entry: number;

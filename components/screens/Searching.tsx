@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, Lock } from "lucide-react";
+import { Lock, Puzzle } from "lucide-react";
 import { rs } from "@/lib/api";
 import type { Category } from "@/lib/types";
 import Avatar from "../Avatar";
@@ -11,7 +11,7 @@ type Props = {
   name: string;
   avatar: string;
   houseWaitSeconds: number;
-  onPlayComputer: () => void;
+  onStartChallenge: () => void;
 };
 
 // Short, calm tips that rotate while the player waits in the lobby.
@@ -24,7 +24,7 @@ const TIPS = [
 ];
 
 // The lobby. The entry is already paid and there is no way back from here.
-export default function Searching({ info, name, avatar, houseWaitSeconds, onPlayComputer }: Props) {
+export default function Searching({ info, name, avatar, houseWaitSeconds, onStartChallenge }: Props) {
   const [secs, setSecs] = useState(0);
   const started = useRef(false);
   const practice = !!info.practice;
@@ -36,13 +36,13 @@ export default function Searching({ info, name, avatar, houseWaitSeconds, onPlay
     return () => clearInterval(t);
   }, [info.since]);
 
-  // After the wait, the app plays the user itself, at any entry.
+  // After the wait, a solo Puzzle Challenge starts instead (any entry).
   useEffect(() => {
     if (!practice && left === 0 && !started.current) {
       started.current = true;
-      onPlayComputer();
+      onStartChallenge();
     }
-  }, [practice, left, onPlayComputer]);
+  }, [practice, left, onStartChallenge]);
 
   return (
     <section className="screen center-col searching">
@@ -72,13 +72,13 @@ export default function Searching({ info, name, avatar, houseWaitSeconds, onPlay
             <b>{left}</b>
           </div>
           <div>
-            <b>{left > 0 ? `${left} second mein player na mila…` : "Computer muqabil mil gaya"}</b>
+            <b>{left > 0 ? `${left} second mein player na mila…` : "Puzzle Challenge shuru ho raha hai"}</b>
             <p>
-              …to <b>app khud aap ke saath match khelegi</b> aur aap ke muqable mein {rs(info.entry)} lagayegi. Muqabil
-              &quot;Computer&quot; likha hoga.
+              …to aap ko <b>Puzzle Challenge</b> milega: ek puzzle, 100 second. Waqt par hal kiya to{" "}
+              <b>{rs(info.prize)}</b>, warna entry gayi.
             </p>
           </div>
-          <Bot className="wait-bot" size={22} />
+          <Puzzle className="wait-bot" size={22} />
         </div>
       )}
 

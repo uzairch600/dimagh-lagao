@@ -46,12 +46,11 @@ export default function Terms() {
             <li>Wallet balance is not a bank deposit and earns no interest.</li>
           </ul>
 
-          <h2>4. Matches against the computer</h2>
+          <h2>4. Puzzle Challenge</h2>
           <p>
-            If no other player is found within 30 seconds, the Platform may offer or start a match against a computer opponent
-            for entries up to a published limit. In such matches the Platform itself pays the entry on the opposing side and
-            pays the prize if you win. The computer opponent is always clearly labelled &quot;Computer&quot; and plays at a fixed
-            strength that is the same for every player, as described on the <Link href="/fair-play">Fair Play</Link> page.
+            Paid quiz matches are always between two real players. If no other player is found within 30 seconds, you get a
+            Puzzle Challenge instead: one puzzle with 100 seconds to solve it. If you solve it in time, the Platform pays you the
+            prize for your entry; if not, the entry is not refunded. See the <Link href="/fair-play">Fair Play</Link> page.
             Practice matches against the computer are free and carry no prize.
           </p>
 

@@ -23,8 +23,9 @@ function forfeitNote(end: MatchEnd): string | null {
 }
 
 export default function Result({ end, user, found, onAgain, onHome }: Props) {
-  const c = COPY[end.outcome];
-  const note = forfeitNote(end);
+  const challenge = end.mode === "challenge";
+  const c = challenge && end.outcome === "loss" && !end.forfeit ? { title: "Chhu mantar!", cls: "lose" } : challenge && end.outcome === "win" ? { title: "Challenge jeet liya!", cls: "win" } : COPY[end.outcome];
+  const note = challenge && !end.forfeit ? (end.outcome === "win" ? "Puzzle waqt par hal — inaam aap ka." : "Waqt khatam, puzzle hal nahi hua — entry gayi.") : forfeitNote(end);
 
   const paid = end.mode !== "practice";
   let amount = "Practice match";
@@ -41,7 +42,7 @@ export default function Result({ end, user, found, onAgain, onHome }: Props) {
       <img className={`result-art ${c.cls}`} src={`/images/result-${c.cls}.webp`} alt="" width={480} height={480} />
       <h1>{c.title}</h1>
       <p className={`result-amount ${amountCls}`}>{amount}</p>
-      {paid && end.outcome === "win" && (
+      {paid && !challenge && end.outcome === "win" && (
         <p className="fee-line">
           Pot {rs(end.entry * 2)} − platform fee {Math.round((end.rake ?? 0.3) * 100)}% ({rs(end.entry * 2 - end.prize)}) = {rs(end.prize)}
         </p>
@@ -51,7 +52,7 @@ export default function Result({ end, user, found, onAgain, onHome }: Props) {
           Aap ke jawabon ka pattern ghair-mamooli tha, is liye inaam review ke baad wallet mein aayega. Sab theek hua to poora inaam milega.
         </p>
       )}
-      {note && <p className={`result-note ${end.forfeit?.by === "opponent" ? "good" : "bad"}`}>{note}</p>}
+      {note && <p className={`result-note ${end.forfeit?.by === "opponent" || (challenge && end.outcome === "win") ? "good" : "bad"}`}>{note}</p>}
 
       <div className="r-board card glass">
         <div className={`r-row ${youTop ? "top" : ""}`}>
@@ -60,12 +61,14 @@ export default function Result({ end, user, found, onAgain, onHome }: Props) {
           <span className="r-correct">{end.you.correct}/{end.total} sahi</span>
           <span className="r-score">{end.you.score}</span>
         </div>
-        <div className={`r-row ${!youTop ? "top" : ""}`}>
-          <Avatar name={end.opponent.name} avatar={found?.opponent.avatar} size="sm" />
-          <b>{end.opponent.name}</b>
-          <span className="r-correct">{end.opponent.correct}/{end.total} sahi</span>
-          <span className="r-score">{end.opponent.score}</span>
-        </div>
+        {!challenge && (
+          <div className={`r-row ${!youTop ? "top" : ""}`}>
+            <Avatar name={end.opponent.name} avatar={found?.opponent.avatar} size="sm" />
+            <b>{end.opponent.name}</b>
+            <span className="r-correct">{end.opponent.correct}/{end.total} sahi</span>
+            <span className="r-score">{end.opponent.score}</span>
+          </div>
+        )}
       </div>
 
       <p className="muted">

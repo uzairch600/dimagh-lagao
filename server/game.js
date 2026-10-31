@@ -3,6 +3,7 @@
 import crypto from "node:crypto";
 import * as db from "./db.js";
 import { CATEGORIES, prefetch, questionCount, questionsForMatch } from "./questions.js";
+import { PUZZLE_KINDS, puzzleRound } from "./puzzles.js";
 
 export const QUESTIONS_PER_MATCH = 10;
 // 10s: enough to read a hard question and four options on a phone, too short to ask an AI on a second
@@ -107,14 +108,14 @@ export function startPractice(socket, user, { category }) {
 // "House" match: no real opponent showed up, so the app itself stakes the other side against a
 // computer player. The computer is always shown as "Computer" — never disguised as a person —
 // and plays at a fixed, published strength.
-export function startHouse(socket, user, { category, entry }) {
+export function startChallenge(socket, user, { category, entry }) {
   if (!CATEGORIES.some((c) => c.id === category)) return { error: "Category nahi mili" };
   if (!ENTRY_TIERS.includes(entry)) return { error: "Ghalat entry fee" };
   // only from the lobby, where the entry was already paid
   const waiting = [...queues.values()].flat().find((w) => w.userId === user.id);
   if (!waiting || activeByUser.get(user.id) !== "queue") return { error: "Pehle lobby mein shamil hon" };
   leaveQueue(user.id);
-  startMatch({ mode: "house", category, entry, a: { user, socket }, b: null, since: waiting.since });
+  startMatch({ mode: "challenge", category, entry, a: { user, socket }, b: null, since: waiting.since });
   return { ok: true };
 }
 
@@ -124,9 +125,18 @@ export const HOUSE_WAIT_SECONDS = 30; // how long a player searches before the a
 const LOBBY_MAX_MS = 60_000; // nobody waits in the lobby longer than this for the AI questions
 const BOT_SKILL = {
   practice: { accuracy: 0.6, minMs: 2000, maxMs: 8500 },
-  house: { accuracy: Number(process.env.HOUSE_BOT_ACCURACY || 0.65), minMs: 2500, maxMs: 8500 },
 };
-const isPaid = (mode) => mode === "paid" || mode === "house";
+const isPaid = (mode) => mode === "paid" || mode === "challenge";
+
+// Puzzle Challenge: nobody to play in 30s, so the player gets ONE hard puzzle and CHALLENGE_SECONDS to solve it.
+// Solved = the prize (paid by the platform); not solved = the entry stays with the platform. Any puzzle kind
+// except the maze, which is too easy for 100 seconds.
+const CHALLENGE_SECONDS = 100;
+async function challengeRound() {
+  const kinds = PUZZLE_KINDS.filter((k) => k !== "maze");
+  const q = await puzzleRound(kinds[crypto.randomInt(kinds.length)], 1);
+  return { ...q, seconds: CHALLENGE_SECONDS };
+}
 
 // since: when the first of these players entered the lobby (the 1-minute lobby limit counts from then)
 function startMatch({ mode, category, entry, a, b, since = Date.now() }) {
@@ -134,11 +144,14 @@ function startMatch({ mode, category, entry, a, b, since = Date.now() }) {
   const players = [a, b].filter(Boolean).map(({ user, socket }) => ({
     userId: user.id, name: user.name, avatar: user.avatar, socket, bot: false, score: 0, correct: 0, answers: [], strikes: 0,
   }));
-  if (mode === "practice" || mode === "house") {
+  if (mode === "practice") {
     players.push({ userId: "bot", name: "Computer", avatar: "bot", socket: null, bot: true, score: 0, correct: 0, answers: [] });
   }
-
-  if (mode === "house") db.addHouse(entry); // entries were charged when the players joined the lobby
+  // the challenge's "opponent" never plays; it only wins when the puzzle isn't solved in time
+  if (mode === "challenge") {
+    players.push({ userId: "challenge", name: "Puzzle Challenge", avatar: "bot", socket: null, bot: true, ghost: true, score: 0, correct: 0, answers: [] });
+    db.addHouse(entry); // the entry was charged when the player joined the lobby
+  }
 
   // Players stay on the matchmaking screen until this match's questions are ready.
   const m = { id, mode, category, entry, prize: isPaid(mode) ? prizeFor(entry) : 0, players, questions: [], index: -1, phase: "preparing", askedAt: 0, timer: null, done: false };
@@ -150,8 +163,8 @@ function startMatch({ mode, category, entry, a, b, since = Date.now() }) {
   // other players still waiting in this category get their own research started
   if (categoryWaiting(category)) prefetch(category, QUESTIONS_PER_MATCH);
 
-  const want = questionCount(category, QUESTIONS_PER_MATCH);
-  questionsForMatch(category, want, since + LOBBY_MAX_MS)
+  const want = mode === "challenge" ? 1 : questionCount(category, QUESTIONS_PER_MATCH);
+  (mode === "challenge" ? challengeRound().then((q) => [q]) : questionsForMatch(category, want, since + LOBBY_MAX_MS))
     .catch((err) => {
       console.error("[game] could not prepare questions:", err);
       return [];
@@ -184,7 +197,7 @@ function cancelMatch(m, reason) {
   clearTimeout(m.timer);
   if (isPaid(m.mode)) {
     for (const p of humans(m)) db.addTransaction(p.userId, "refund", m.entry, "Match cancel — entry wapas");
-    if (m.mode === "house") db.addHouse(-m.entry);
+    if (m.mode === "challenge") db.addHouse(-m.entry);
   }
   for (const p of humans(m)) {
     clearTimeout(p.graceTimer);
@@ -218,7 +231,7 @@ function ask(m) {
     p.perm = shuffle([0, 1, 2, 3]);
     sendQuestion(m, p);
   }
-  for (const p of m.players) if (p.bot) scheduleBot(m, p);
+  for (const p of m.players) if (p.bot && !p.ghost) scheduleBot(m, p);
   m.timer = setTimeout(() => reveal(m), secondsFor(m.questions[m.index]) * 1000 + GRACE_MS);
 }
 
@@ -300,7 +313,7 @@ export function speedPoints(ms, limit = SECONDS_PER_QUESTION * 1000) {
 }
 
 function revealIfDone(m) {
-  if (m.phase === "question" && m.players.every((x) => x.answers[m.index] || (!x.bot && !x.socket?.connected))) {
+  if (m.phase === "question" && m.players.every((x) => x.ghost || x.answers[m.index] || (!x.bot && !x.socket?.connected))) {
     clearTimeout(m.timer);
     reveal(m);
   }
@@ -332,25 +345,27 @@ function finish(m, opts = {}) {
   clearTimeout(m.timer);
   clearTimeout(m.cheatTimer);
   const [a, b] = m.players;
-  const winner = opts.void || opts.nobodyWins ? null : opts.winner ?? (a.score === b.score ? null : a.score > b.score ? a : b);
+  // challenge: solved (any points) beats the ghost; otherwise the ghost "wins" and the platform keeps the entry
+  const byScore = m.mode === "challenge" ? (a.score > 0 ? a : b) : a.score === b.score ? null : a.score > b.score ? a : b;
+  const winner = opts.void || opts.nobodyWins ? null : opts.winner ?? byScore;
   const patterns = new Map(humans(m).map((p) => [p, checkPatterns(m, p)]));
   const holdReasons = winner && !winner.bot && isPaid(m.mode) ? (patterns.get(winner) || []).filter((r) => r.hold).map((r) => r.reason) : [];
   const held = holdReasons.length > 0;
 
   if (isPaid(m.mode)) {
     if (winner && !winner.bot && held) {
-      const f = db.holdPrize({ userId: winner.userId, matchId: m.id, amount: m.prize, house: m.mode === "house", reasons: holdReasons });
+      const f = db.holdPrize({ userId: winner.userId, matchId: m.id, amount: m.prize, house: m.mode === "challenge", reasons: holdReasons });
       console.warn(`[anti-cheat] prize Rs ${m.prize} held for review (${f.id}): ${winner.name} — ${holdReasons.join("; ")}`);
     } else if (winner && !winner.bot) {
       db.addTransaction(winner.userId, "prize", m.prize, `Match jeeta vs ${m.players.find((x) => x !== winner).name}`);
-      if (m.mode === "house") db.addHouse(-m.prize);
+      if (m.mode === "challenge") db.addHouse(-m.prize);
     } else if (opts.nobodyWins) {
       // both players broke the rules: both lose, the platform keeps the entries
       if (m.mode === "paid") db.addForfeited(m.entry * humans(m).length);
     } else if (!winner) {
       const note = opts.void ? "Match void — entry wapas" : "Match draw — entry wapas";
       for (const p of humans(m)) db.addTransaction(p.userId, "refund", m.entry, note);
-      if (m.mode === "house") db.addHouse(-m.entry);
+      if (m.mode === "challenge") db.addHouse(-m.entry);
     }
     for (const p of humans(m)) {
       const outcome = opts.nobodyWins ? "loss" : !winner ? "draw" : p === winner ? "win" : "loss";

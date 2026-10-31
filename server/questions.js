@@ -278,9 +278,10 @@ export function aiUsageToday() {
   return { ...usage, batchCap: DAILY_BATCH_CAP, costCapUsd: DAILY_COST_CAP };
 }
 
-// Restarting the server must not reset today's spend.
-if (store.enabled) {
-  const saved = (await store.loadAll("kv")).find((r) => r.id === usage.id);
+// Restarting the server must not reset today's spend or forget saved research.
+const kvRows = store.enabled ? await store.loadAll("kv") : [];
+{
+  const saved = kvRows.find((r) => r.id === usage.id);
   if (saved) usage = { ...usage, ...saved };
 }
 
@@ -293,7 +294,7 @@ async function research(catName, topic) {
   const messages = [{
     role: "user",
     content: `Topic: ${catName} — ${topic}.
-Search the web and collect 35 precise facts for EXPERT-level quiz questions: obscure but well-documented details, exact figures, records, firsts, dates, technical specifics, surprising connections between two things. Avoid textbook basics (definitions, acronym expansions, famous capital cities, keyboard shortcuts).
+Search the web and collect 35 precise facts that a well-read Pakistani fan would find fair and interesting for a hard quiz: exact figures, records, firsts, dates, surprising connections between two things. Pakistan and South Asia first, then world-famous subjects. No US or European local news, no politics, no obscure local figures. Avoid textbook basics (definitions, acronym expansions, famous capital cities, keyboard shortcuts).
 Cover at least 12 DIFFERENT subjects within the topic (no more than 3 facts about any single person, place, team, film or thing), and include Pakistan-related subjects where they fit.
 For anything that can change over time, include the date or season in the fact.
 Return only a plain bullet list, one fact per line, each ending with the source site name in brackets.`,
@@ -327,6 +328,40 @@ Return only a plain bullet list, one fact per line, each ending with the source 
   return "";
 }
 
+// ---------- research cache ----------
+// Web search is ~85% of an AI match's cost, so a topic is researched once and its facts are saved. Later matches
+// reuse them (no search) until they stop producing new questions; then that topic is researched again.
+const FACTS_MAX_AGE_MS = 30 * 24 * 3600_000; // facts that can change get fresh research at least monthly
+const factsCache = new Map(); // `${category}|${topic}` -> { id, category, topic, facts, at, uses, spent }
+for (const row of kvRows) if (row.id?.startsWith("facts-")) factsCache.set(`${row.category}|${row.topic}`, row);
+
+const FACTS_MAX_USES = 6; // after this many matches a topic's facts are worn out anyway
+const usableFacts = (f) => !!f && !f.spent && f.uses < FACTS_MAX_USES && Date.now() - f.at < FACTS_MAX_AGE_MS;
+const saveFacts = (f) => store.enabled && store.queue("kv", { ...f });
+
+// A topic for this match: one that already has saved research (no search needed), else the next in the rotation.
+function pickTopic(category) {
+  const ready = SUBTOPICS[category].filter((t) => usableFacts(factsCache.get(`${category}|${t}`)));
+  return ready.length ? ready[crypto.randomInt(ready.length)] : nextTopic(category);
+}
+
+async function factsFor(category, catName, topic) {
+  const key = `${category}|${topic}`;
+  const cached = factsCache.get(key);
+  if (usableFacts(cached)) {
+    cached.uses++;
+    saveFacts(cached);
+    console.log(`[questions] ${category}/${topic}: saved research reused (use ${cached.uses}) — no web search`);
+    return cached;
+  }
+  const facts = await research(catName, topic);
+  if (!facts) return null;
+  const entry = { id: "facts-" + hashId(category, topic), category, topic, facts, at: Date.now(), uses: 1, spent: false };
+  factsCache.set(key, entry);
+  saveFacts(entry);
+  return entry;
+}
+
 const topicCursor = {};
 // Web research runs for every match (accurate hard questions). Set AI_WEB_RESEARCH=false to turn it off.
 const WEB_RESEARCH = process.env.AI_WEB_RESEARCH !== "false";
@@ -356,9 +391,10 @@ function handleAiError(err) {
 // Research (web) -> write questions -> fact-check. If too few pass, one more write + check round runs on the
 // same research (no new searches). Returns accepted, unused questions.
 async function generateForMatch(category, count) {
-  const topic = nextTopic(category);
+  const topic = WEB_RESEARCH ? pickTopic(category) : nextTopic(category);
   const catName = CATEGORIES.find((c) => c.id === category).name;
-  const facts = WEB_RESEARCH ? await research(catName, topic) : "";
+  const saved = WEB_RESEARCH ? await factsFor(category, catName, topic) : null;
+  const facts = saved?.facts ?? "";
   if (WEB_RESEARCH && !facts) return []; // the match is filled from stored questions instead
   const source = facts
     ? "Build every question ONLY on the researched facts you are given. Never invent a fact."
@@ -444,6 +480,12 @@ ${used}${avoid}`,
       `[questions] ${category}/${topic} round ${round + 1}: ${passed.length}/${candidates.length} passed the fact-check (${gen.parsed_output.questions.length} written)` +
         (problems.length ? ` — rejected e.g.: ${problems.join(" | ")}` : ""),
     );
+  }
+  // reused facts that no longer fill a match are running out: research the topic again next time.
+  // (A first use that falls short just had a strict fact-check; those facts get another go.)
+  if (saved && saved.uses >= 2 && accepted.length < count) {
+    saved.spent = true;
+    saveFacts(saved);
   }
   return accepted;
 }

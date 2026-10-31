@@ -190,8 +190,8 @@ export function attachRealtime(httpServer) {
       cb?.(result);
     });
     socket.on("queue:leave", (_, cb) => cb?.(game.cancelSearch(userId)));
-    socket.on("house:start", (payload, cb) => {
-      cb?.(game.startHouse(socket, db.getUser(userId), { category: payload?.category, entry: Number(payload?.entry) }));
+    socket.on("challenge:start", (payload, cb) => {
+      cb?.(game.startChallenge(socket, db.getUser(userId), { category: payload?.category, entry: Number(payload?.entry) }));
     });
     socket.on("practice:start", (payload, cb) => {
       cb?.(game.startPractice(socket, db.getUser(userId), { category: payload?.category }));

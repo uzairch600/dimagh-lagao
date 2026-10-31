@@ -208,9 +208,9 @@ export default function GameApp() {
     });
   };
 
-  const startHouse = () => {
+  const startChallenge = () => {
     if (!searching) return;
-    socketRef.current?.emit("house:start", { category: searching.category.id, entry: searching.entry }, (res: { error?: string }) => {
+    socketRef.current?.emit("challenge:start", { category: searching.category.id, entry: searching.entry }, (res: { error?: string }) => {
       if (res?.error) notify(res.error, "error");
     });
   };
@@ -304,7 +304,7 @@ export default function GameApp() {
               <Searching
                 info={searching} name={user.name} avatar={user.avatar}
                 houseWaitSeconds={config.houseWaitSeconds}
-                onPlayComputer={startHouse}
+                onStartChallenge={startChallenge}
               />
             )}
             {screen === "versus" && match && <Versus found={match.found} />}

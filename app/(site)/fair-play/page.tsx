@@ -6,7 +6,7 @@ import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Fair Play & Responsible Gaming",
-  description: "Dimagh Lagao par muqabla kaise imaandar rehta hai, computer opponent ki tafseel, aur zimmedari se khelna.",
+  description: "Dimagh Lagao par muqabla kaise imaandar rehta hai, Puzzle Challenge ki tafseel, aur zimmedari se khelna.",
 };
 
 export default function FairPlay() {
@@ -19,7 +19,7 @@ export default function FairPlay() {
           <div className="fair-cards">
             <div className="side-card"><ShieldCheck size={22} /><b>Same sawal</b><p>Dono players ko bilkul same sawal, same order.</p></div>
             <div className="side-card"><Clock size={22} /><b>Server ki ghari</b><p>Timer aur sahi jawab server par — browser mein nahi.</p></div>
-            <div className="side-card"><Bot size={22} /><b>Computer hamesha labelled</b><p>Kabhi insaan ban kar nahi khelta.</p></div>
+            <div className="side-card"><Bot size={22} /><b>Sirf asli muqabil</b><p>Paid quiz hamesha do insaanon ke beech.</p></div>
             <div className="side-card"><HeartHandshake size={22} /><b>Had mein khelein</b><p>Sirf {SITE.minAge}+, aur sirf utna jitna afford kar sakein.</p></div>
           </div>
 
@@ -36,16 +36,15 @@ export default function FairPlay() {
               <li>Paid match mein jeetne wale ka pattern ghair-mamooli ho (taqreeban sab sahi magar hamesha der se, ya har match mein ek jaisi timing) to inaam review ke baad milta hai. Saaf jeet ka inaam foran milta hai.</li>
             </ul>
 
-            <h2>Computer opponent</h2>
+            <h2>Puzzle Challenge</h2>
             <p>
-              Agar 30 second mein koi asli player na mile, to har entry par app khud &quot;Computer&quot; ban kar aap ke
-              saath khelti hai. Us match mein app aap ke muqable mein utni hi entry lagati hai, aur aap jeetein to inaam app deti
-              hai.
+              Paid quiz hamesha do asli players ke beech hota hai — app kabhi computer ban kar aap ke khilaf nahi khelti. Agar 30
+              second mein koi muqabil na mile, to aap ko <b>Puzzle Challenge</b> milta hai: ek puzzle aur 100 second.
             </p>
             <ul>
-              <li>Computer hamesha &quot;Computer&quot; naam aur robot icon ke saath dikhta hai.</li>
-              <li>Us ki taqat sab ke liye ek jaisi aur fix hai: taqreeban <b>65% sawal sahi</b>, jawab <b>2.5 se 8.5 second</b> mein.</li>
-              <li>Computer ke paas sahi jawab pehle se nahi hota jo aap ke khilaf istemal ho — wo bas apni fix accuracy par khelta hai.</li>
+              <li>100 second ke andar puzzle sahi hal kiya to match ka poora inaam aap ka (inaam app deti hai).</li>
+              <li>Waqt khatam aur puzzle hal nahi hua, to entry wapas nahi milti.</li>
+              <li>Puzzle har player ke liye random chuna jata hai aur server khud check karta hai ke hal sahi hai.</li>
               <li>Match ke beech chale gaye aur 10 second mein wapas na aaye, to aap haar jate hain aur entry wapas nahi milti.</li>
             </ul>
 
