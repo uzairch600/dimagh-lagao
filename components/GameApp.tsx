@@ -10,6 +10,7 @@ import Sheet from "./Sheet";
 import Toast, { type ToastState } from "./Toast";
 import Login from "./screens/Login";
 import Home from "./screens/Home";
+import Play from "./screens/Play";
 import PlaySheet from "./screens/PlaySheet";
 import Searching from "./screens/Searching";
 import Versus from "./screens/Versus";
@@ -31,7 +32,7 @@ export type MatchState = {
 
 type LastPlay = { category: Category; entry: number | null }; // entry null = practice
 
-const NAV_SCREENS: Screen[] = ["home", "wallet", "leaderboard", "profile"];
+const NAV_SCREENS: Screen[] = ["home", "play", "wallet", "leaderboard", "profile"];
 
 export default function GameApp() {
   const [booting, setBooting] = useState(true);
@@ -238,7 +239,8 @@ export default function GameApp() {
         {screen === "login" && <Login onLoggedIn={onLoggedIn} notify={notify} />}
         {user && config && (
           <>
-            {screen === "home" && <Home user={user} config={config} go={go} onPick={openPlaySheet} />}
+            {screen === "home" && <Home user={user} config={config} go={go} />}
+            {screen === "play" && <Play user={user} config={config} go={go} onPick={openPlaySheet} />}
             {screen === "searching" && searching && (
               <Searching
                 info={searching} name={user.name} avatar={user.avatar}

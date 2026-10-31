@@ -85,4 +85,4 @@ export type MatchEnd = {
   balance: number;
 };
 
-export type Screen = "login" | "home" | "searching" | "versus" | "match" | "result" | "wallet" | "leaderboard" | "profile";
+export type Screen = "login" | "home" | "play" | "searching" | "versus" | "match" | "result" | "wallet" | "leaderboard" | "profile";

@@ -2,7 +2,7 @@ import { Clapperboard, Cpu, HelpCircle, Sparkles, type LucideIcon } from "lucide
 
 // 3D mascot artwork for each quiz category (public/images/cat-*.webp).
 // Categories without artwork yet fall back to an icon on the same tile.
-const ART = new Set(["pakistan", "cricket", "world", "science", "math"]);
+const ART = new Set(["pakistan", "cricket", "world", "science", "math", "it", "ai", "entertainment"]);
 const FALLBACK: Record<string, { icon: LucideIcon; color: string }> = {
   it: { icon: Cpu, color: "#5fd3ff" },
   ai: { icon: Sparkles, color: "#b79bff" },

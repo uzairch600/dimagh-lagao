@@ -38,7 +38,7 @@ export default function Login({ onLoggedIn, notify }: Props) {
         <h1>
           Dimagh <span>Lagao</span>
         </h1>
-        <p className="urdu">دماغ لگاؤ، انعام جیتو</p>
+        <p className="tagline">Dimagh lagao, inaam jeeto</p>
       </div>
 
       <form className="card glass login-card" onSubmit={submit}>
