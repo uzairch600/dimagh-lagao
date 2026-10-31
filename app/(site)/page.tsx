@@ -1,16 +1,14 @@
 import Link from "next/link";
-import {
-  ArrowRight, Bot, CircleDot, Clock, FlaskConical, Globe, Landmark, Lock, ShieldCheck, Smartphone, Swords, Trophy, Users, Wallet, Zap,
-} from "lucide-react";
+import { ArrowRight, Bot, Clock, Lock, ShieldCheck, Smartphone, Swords, Trophy, Users, Wallet } from "lucide-react";
 import { LiveStrip, WinnersList } from "@/components/site/Live";
 import { SITE } from "@/lib/site";
 
 const CATEGORIES = [
-  { icon: Landmark, name: "Pakistan GK", desc: "Tareekh, jughrafia, culture", color: "#2ff0b0" },
-  { icon: CircleDot, name: "Cricket", desc: "Records, legends, rules", color: "#ff6b85" },
-  { icon: Globe, name: "Duniya GK", desc: "Capitals, history, duniya", color: "#5fd3ff" },
-  { icon: FlaskConical, name: "Science", desc: "Jism, space, technology", color: "#b79bff" },
-  { icon: Zap, name: "Math Speed", desc: "Tez hisaab — sab se fast jeete", color: "#ffd36e" },
+  { id: "pakistan", name: "Pakistan GK", desc: "Tareekh, jughrafia, culture" },
+  { id: "cricket", name: "Cricket", desc: "Records, legends, rules" },
+  { id: "world", name: "Duniya GK", desc: "Capitals, history, duniya" },
+  { id: "science", name: "Science", desc: "Jism, space, technology" },
+  { id: "math", name: "Math Speed", desc: "Tez hisaab — sab se fast jeete" },
 ];
 
 const STEPS = [
@@ -62,29 +60,7 @@ export default function Landing() {
           </div>
 
           <div className="hero-visual" aria-hidden="true">
-            <div className="phone">
-              <div className="phone-notch" />
-              <div className="mock-score">
-                <span className="mock-av a">AK</span>
-                <b>1,240</b>
-                <span className="mock-timer">7</span>
-                <b className="pink">980</b>
-                <span className="mock-av b">SR</span>
-              </div>
-              <div className="mock-dots">
-                {Array.from({ length: 10 }, (_, i) => (
-                  <i key={i} className={i < 4 ? (i === 2 ? "bad" : "ok") : i === 4 ? "now" : ""} />
-                ))}
-              </div>
-              <div className="mock-q">
-                <small>Sawal 5/10</small>
-                <p>Pakistan ka qaumi phool kaunsa hai?</p>
-              </div>
-              <div className="mock-opt">A <span>Gulab</span></div>
-              <div className="mock-opt correct">B <span>Chambeli (Jasmine)</span></div>
-              <div className="mock-opt">C <span>Tulip</span></div>
-              <div className="mock-opt">D <span>Surajmukhi</span></div>
-            </div>
+            <img className="hero-art-img" src="/images/hero.webp" alt="" width={1408} height={768} />
             <div className="float-card fc1">
               <Trophy size={18} /> <span><b>+Rs 90</b> jeeta</span>
             </div>
@@ -126,11 +102,9 @@ export default function Landing() {
             <h2>Apni pasand ka maidan chunein</h2>
           </div>
           <div className="cat-cards">
-            {CATEGORIES.map(({ icon: Icon, name, desc, color }) => (
-              <Link href="/play" key={name} className="cat-card">
-                <span className="cat-icon" style={{ color, background: `${color}1f`, borderColor: `${color}40` }}>
-                  <Icon size={28} />
-                </span>
+            {CATEGORIES.map(({ id, name, desc }) => (
+              <Link href="/play" key={id} className="cat-card">
+                <img className="cat-card-art" src={`/images/cat-${id}.webp`} alt="" width={480} height={480} loading="lazy" />
                 <h3>{name}</h3>
                 <p>{desc}</p>
                 <span className="cat-link">Khelein <ArrowRight size={16} /></span>
@@ -199,11 +173,14 @@ export default function Landing() {
       <section className="site-section">
         <div className="site-container">
           <div className="cta-band">
-            <h2>Aap ka dimagh kitna tez hai?</h2>
-            <p>Free practice se shuru karein, phir asli muqabla khelein.</p>
-            <Link href="/play" className="btn btn-gold btn-lg">
-              Abhi khelein <ArrowRight size={20} />
-            </Link>
+            <div className="cta-copy">
+              <h2>Aap ka dimagh kitna tez hai?</h2>
+              <p>Free practice se shuru karein, phir asli muqabla khelein.</p>
+              <Link href="/play" className="btn btn-gold btn-lg">
+                Abhi khelein <ArrowRight size={20} />
+              </Link>
+            </div>
+            <img className="cta-art" src="/images/cta.webp" alt="" width={1408} height={768} loading="lazy" />
           </div>
         </div>
       </section>

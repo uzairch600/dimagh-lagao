@@ -15,6 +15,7 @@ export default function FairPlay() {
       <PageHero eyebrow="Trust" title="Fair Play & Responsible Gaming" sub="Har match imaandar ho — aur khel, khel hi rahe." />
       <section className="site-section">
         <div className="site-container narrow">
+          <img className="page-art" src="/images/fair-play.webp" alt="" width={640} height={640} />
           <div className="fair-cards">
             <div className="side-card"><ShieldCheck size={22} /><b>Same sawal</b><p>Dono players ko bilkul same sawal, same order.</p></div>
             <div className="side-card"><Clock size={22} /><b>Server ki ghari</b><p>Timer aur sahi jawab server par — browser mein nahi.</p></div>

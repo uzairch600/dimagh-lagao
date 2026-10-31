@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Brain } from "lucide-react";
 import { api } from "@/lib/api";
 import type { User } from "@/lib/types";
 
@@ -35,9 +34,7 @@ export default function Login({ onLoggedIn, notify }: Props) {
   return (
     <section className="screen login-wrap">
       <div className="logo">
-        <div className="logo-mark">
-          <Brain size={48} strokeWidth={1.8} />
-        </div>
+        <img className="logo-mascot" src="/images/logo-mascot.webp" alt="" width={160} height={160} />
         <h1>
           Dimagh <span>Lagao</span>
         </h1>

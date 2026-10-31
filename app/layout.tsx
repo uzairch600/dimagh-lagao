@@ -11,9 +11,21 @@ export const metadata: Metadata = {
   title: { default: `${SITE.name} — 1v1 quiz muqabla, inaam jeeto`, template: `%s | ${SITE.name}` },
   description:
     "Pakistan ka 1v1 skill quiz game. Asli players ke saath live muqabla karein — Pakistan GK, cricket, science, math — aur sahi aur tez jawab de kar inaam jeetein.",
-  openGraph: { siteName: SITE.name, type: "website", locale: "en_PK" },
+  openGraph: {
+    siteName: SITE.name,
+    type: "website",
+    locale: "en_PK",
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: SITE.name }],
+  },
+  twitter: { card: "summary_large_image", images: ["/og-image.jpg"] },
   manifest: "/manifest.json",
-  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  icons: {
+    icon: [
+      { url: "/favicon-48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: { capable: true, title: "Dimagh Lagao", statusBarStyle: "black-translucent" },
 };
 

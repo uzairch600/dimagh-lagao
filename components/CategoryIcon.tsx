@@ -1,18 +1,10 @@
-import { CircleDot, FlaskConical, Globe, HelpCircle, Landmark, Zap, type LucideIcon } from "lucide-react";
+// 3D mascot artwork for each quiz category (public/images/cat-*.webp).
+const KNOWN = new Set(["pakistan", "cricket", "world", "science", "math"]);
 
-const ICONS: Record<string, { icon: LucideIcon; color: string }> = {
-  pakistan: { icon: Landmark, color: "#2ff0b0" },
-  cricket: { icon: CircleDot, color: "#ff6b85" },
-  world: { icon: Globe, color: "#5fd3ff" },
-  science: { icon: FlaskConical, color: "#b79bff" },
-  math: { icon: Zap, color: "#ffd36e" },
-};
-
-export default function CategoryIcon({ id, size = 26 }: { id: string; size?: number }) {
-  const { icon: Icon, color } = ICONS[id] ?? { icon: HelpCircle, color: "#a3a1c9" };
+export default function CategoryIcon({ id, name = "" }: { id: string; name?: string }) {
   return (
-    <span className="cat-icon" style={{ color, background: `${color}1f`, borderColor: `${color}40` }}>
-      <Icon size={size} strokeWidth={2.2} />
+    <span className="cat-icon cat-art">
+      {KNOWN.has(id) && <img src={`/images/cat-${id}.webp`} alt={name} width={96} height={96} loading="lazy" />}
     </span>
   );
 }

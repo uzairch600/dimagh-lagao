@@ -3,15 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Brain, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { NAV, SITE } from "@/lib/site";
 
 export function Logo() {
   return (
     <Link href="/" className="site-logo" aria-label={SITE.name}>
-      <span className="site-logo-mark">
-        <Brain size={22} strokeWidth={2} />
-      </span>
+      <img className="site-logo-mark" src="/images/app-icon.webp" alt="" width={40} height={40} />
       <span>
         Dimagh <b>Lagao</b>
       </span>

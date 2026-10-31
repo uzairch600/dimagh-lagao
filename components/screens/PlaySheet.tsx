@@ -16,7 +16,7 @@ export default function PlaySheet({ category, config, balance, onPlay, onPractic
   return (
     <>
       <h3 className="sheet-title">
-        <CategoryIcon id={category.id} size={20} /> {category.name}
+        <CategoryIcon id={category.id} name={category.name} /> {category.name}
       </h3>
       <p className="sub">Entry fee chunein — jeetne wala poora inaam le jata hai</p>
       <div className="tiers">

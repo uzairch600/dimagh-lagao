@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { ArrowLeft, Brain, CircleDot, FlaskConical, Globe, Landmark, Zap } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import CategoryIcon from "./CategoryIcon";
 import { SITE } from "@/lib/site";
 
 const CATS = [
-  { icon: Landmark, name: "Pakistan GK", color: "#2ff0b0" },
-  { icon: CircleDot, name: "Cricket", color: "#ff6b85" },
-  { icon: Globe, name: "Duniya GK", color: "#5fd3ff" },
-  { icon: FlaskConical, name: "Science", color: "#b79bff" },
-  { icon: Zap, name: "Math Speed", color: "#ffd36e" },
+  { id: "pakistan", name: "Pakistan GK" },
+  { id: "cricket", name: "Cricket" },
+  { id: "world", name: "Duniya GK" },
+  { id: "science", name: "Science" },
+  { id: "math", name: "Math Speed" },
 ];
 
 // Shown at /play while the game server isn't deployed yet.
@@ -15,9 +16,7 @@ export default function ComingSoon() {
   return (
     <main className="app no-nav">
       <section className="screen center-col coming-soon">
-        <div className="logo-mark">
-          <Brain size={48} strokeWidth={1.8} />
-        </div>
+        <img className="cs-art" src="/images/coming-soon.webp" alt="" width={260} height={260} />
         <p className="eyebrow">Launching soon</p>
         <h1>
           Game jald <span className="gold">live</span> ho rahi hai
@@ -27,11 +26,9 @@ export default function ComingSoon() {
           aur kaunsi categories hongi.
         </p>
         <div className="cs-cats">
-          {CATS.map(({ icon: Icon, name, color }) => (
-            <span key={name} className="cs-cat">
-              <span className="cat-icon" style={{ color, background: `${color}1f`, borderColor: `${color}40` }}>
-                <Icon size={20} />
-              </span>
+          {CATS.map(({ id, name }) => (
+            <span key={id} className="cs-cat">
+              <CategoryIcon id={id} />
               {name}
             </span>
           ))}

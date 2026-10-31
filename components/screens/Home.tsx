@@ -68,7 +68,7 @@ export default function Home({ user, config, go, onPick }: Props) {
           const wide = i === config.categories.length - 1 && config.categories.length % 2 === 1;
           return (
             <button key={c.id} className={`cat ${wide ? "wide" : ""}`} onClick={() => onPick(c)}>
-              <CategoryIcon id={c.id} />
+              <CategoryIcon id={c.id} name={c.name} />
               <span>
                 <b>{c.name}</b>
                 <small>{BLURB[c.id] ?? ""}</small>

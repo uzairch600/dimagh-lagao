@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Brain, House, Trophy, User, Wallet, type LucideIcon } from "lucide-react";
+import { ArrowLeft, House, Trophy, User, Wallet, type LucideIcon } from "lucide-react";
 import type { Screen } from "@/lib/types";
 
 const ITEMS: { id: Screen; icon: LucideIcon; label: string }[] = [
@@ -14,9 +14,7 @@ export default function BottomNav({ screen, go }: { screen: Screen; go: (s: Scre
   return (
     <nav className="bottom-nav">
       <Link href="/" className="nav-brand">
-        <span className="site-logo-mark">
-          <Brain size={20} />
-        </span>
+        <img className="site-logo-mark" src="/images/app-icon.webp" alt="" width={40} height={40} />
         <span>
           Dimagh <b>Lagao</b>
         </span>
