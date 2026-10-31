@@ -7,7 +7,7 @@ import crypto from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { DATA_DIR } from "./db.js";
+import { DATA_DIR, allSeenIds } from "./db.js";
 import { SEED } from "./seed-questions.js";
 import * as store from "./store.js";
 
@@ -106,7 +106,22 @@ if (store.enabled) {
     }
   }
 }
+// Global no-repeat: a question text exists once across all categories, and once shown it is retired forever.
+const allNorms = new Set();
+for (const items of Object.values(pool)) for (const q of items) allNorms.add(norm(q.q));
+{
+  const seen = allSeenIds();
+  const newlyUsed = [];
+  for (const items of Object.values(pool)) for (const q of items) if (!q.used && seen.has(q.id)) { q.used = true; newlyUsed.push(q.id); }
+  if (store.enabled && newlyUsed.length) await store.markQuestionsUsed(newlyUsed);
+}
 savePool();
+
+function markUsed(items) {
+  for (const q of items) q.used = true;
+  savePool();
+  if (store.enabled) store.markQuestionsUsed(items.map((q) => q.id)).catch((err) => console.error("[questions] marking used failed:", err.message));
+}
 
 function savePool(category, added) {
   fs.writeFileSync(POOL_FILE, JSON.stringify(pool, null, 2));
@@ -167,23 +182,16 @@ function mathQuestion(level) {
 }
 
 // Stored questions neither player has seen (used only to top up a match the AI couldn't fill).
-function storedUnseen(category, count, seenSets) {
-  const items = pool[category] || [];
-  const fresh = items.filter((x) => !seenSets.some((s) => s.has(x.id)));
-  // hard, web-researched questions first; older ones only fill the gaps
+// Unused stored questions (top-up only). Used questions are never shown again — no fallback to them.
+function storedUnused(category, count, exclude = []) {
+  // ai-match questions written before web search worked (no `web` mark) were never grounded in a search
+  const fresh = (pool[category] || []).filter((x) => !x.used && !exclude.includes(x) && !(x.source === "ai-match" && !x.web));
   const trivial = (x) => x.source === "seed" || x.difficulty === "easy" || /stand for|full form|shortcut|keyboard/i.test(x.q);
-  const chosen = [
+  return [
     ...shuffle(fresh.filter(isHard)),
-    ...shuffle(fresh.filter((x) => !isHard(x) && !trivial(x))),
-    ...shuffle(fresh.filter((x) => !isHard(x) && trivial(x))),
+    ...shuffle(fresh.filter((x) => !isHard(x) && !trivial(x) && x.difficulty === "hard")),
+    ...shuffle(fresh.filter((x) => !isHard(x) && !trivial(x) && x.difficulty !== "hard")),
   ].slice(0, count);
-  if (chosen.length < count) {
-    // last resort only: every stored question has been seen by these players
-    console.warn(`[questions] ${category}: only ${chosen.length} unseen stored questions, reusing seen ones`);
-    const ids = new Set(chosen.map((x) => x.id));
-    chosen.push(...shuffle(items.filter((x) => !ids.has(x.id))).slice(0, count - chosen.length));
-  }
-  return chosen;
 }
 
 // ---------- AI generation ----------
@@ -200,7 +208,8 @@ const GeneratedSchema = z.object({
 });
 
 const VerdictSchema = z.object({
-  verdicts: z.array(z.object({ number: z.number().int(), ok: z.boolean() })),
+  // problem: a few words on why a question was rejected (logged so we can see what fails)
+  verdicts: z.array(z.object({ number: z.number().int(), ok: z.boolean(), problem: z.string() })),
 });
 
 const GEN_SYSTEM = `You write INSANE-level multiple-choice quiz questions for a Pakistani 1v1 quiz-battle app where experts compete for prizes. Accuracy matters more than anything.
@@ -210,10 +219,12 @@ Rules:
 - Be creative. Mix these styles:
   * exact figures and records ("How many ... did ... score/sell/measure ...?")
   * reverse lookups (give a precise stat or event, ask who/what it was)
-  * chronology ("Which of these happened FIRST?" with four real events)
   * connections ("Which of these four ALSO ...?")
-  * odd-one-out ("Which of these did NOT ...?") — only when the fact sheet proves all four
-- Each question must be answerable within 20 seconds by someone who truly knows: under 25 words, answers 1-6 words, no trick wording.
+  * cause and detail ("Why / how / where did ... happen?")
+- Never write "Which came first" or "Which of these is NOT / did NOT" questions.
+- Spread the questions out: at most 2 questions about the same person, place, team, element, film, company or event.
+- Ask about the subject itself, never about where the fact was published: no questions about websites, press releases, articles or documents, and never name a source in the question.
+- Players get only 10 seconds, so each question must be readable in about 4 seconds: under 20 words, answers 1-5 words, no trick wording.
 - Exactly one answer is correct; the three wrong answers must be very plausible (same type, close numbers, same era) but definitely wrong.
 - If a fact can change over time, put the date or season in the question. Never use "current", "latest", "now" or "recently".
 - Simple English. Nothing religiously, politically or ethnically controversial; nothing about celebrities' private lives.`;
@@ -222,8 +233,10 @@ const VERIFY_SYSTEM = `You are a strict fact-checker for a quiz app with money p
 - the marked correct answer is directly supported by the researched facts (or is a fact you are completely certain of),
 - none of the wrong answers could also be considered correct,
 - the question is unambiguous, and any time-sensitive fact is pinned to a date or season in the question,
-- it is not religiously, politically or ethnically controversial.
-When in doubt, set ok=false.`;
+- it is not religiously, politically or ethnically controversial,
+- it asks about the subject itself, not about a website, press release, article or the source of the fact,
+- it is not a "which came first" or "which is NOT" question.
+When in doubt, set ok=false. For every question, put a few words in "problem" saying what is wrong (empty if ok).`;
 
 // ---------- cost control ----------
 // Haiku 5.5 list prices (USD per million tokens) and web search (USD per search).
@@ -273,6 +286,7 @@ Cover at least 12 DIFFERENT subjects within the topic (no more than 3 facts abou
 For anything that can change over time, include the date or season in the fact.
 Return only a plain bullet list, one fact per line, each ending with the source site name in brackets.`,
   }];
+  let hits = 0; // search results that actually came back
   for (let turn = 0; turn < 3; turn++) {
     const res = await client.messages.create({
       model: MODEL,
@@ -280,24 +294,31 @@ Return only a plain bullet list, one fact per line, each ending with the source 
       system: RESEARCH_SYSTEM,
       thinking: NO_THINKING,
       output_config: { effort: "low" },
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 3 }],
+      // Haiku needs the basic tool version: with web_search_20260209 every search fails with invalid_tool_input
+      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
       messages,
     });
     track(res, "research");
+    hits += res.content.filter((b) => b.type === "web_search_tool_result" && Array.isArray(b.content)).reduce((n, b) => n + b.content.length, 0);
     if (res.stop_reason === "pause_turn") {
       messages.push({ role: "assistant", content: res.content });
       continue;
     }
     if (res.stop_reason !== "end_turn") return "";
+    // without real search results the "facts" would come from memory: not good enough for money questions
+    if (!hits) {
+      console.warn(`[questions] research for ${catName}/${topic}: no search results came back`);
+      return "";
+    }
     return res.content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
   }
   return "";
 }
 
 const topicCursor = {};
-// Web research makes a match ~30-40s slower and ~15-20x more expensive, so it is off unless enabled.
-const WEB_RESEARCH = process.env.AI_WEB_RESEARCH === "true";
-const SPARE = 4; // a few extra questions in case the fact-check rejects some
+// Web research runs for every match (accurate hard questions). Set AI_WEB_RESEARCH=false to turn it off.
+const WEB_RESEARCH = process.env.AI_WEB_RESEARCH !== "false";
+const SPARE = 10; // extra questions so the match still has 10 after the fact-check drops doubtful ones
 
 function nextTopic(category) {
   const topics = SUBTOPICS[category];
@@ -320,116 +341,159 @@ function handleAiError(err) {
   }
 }
 
-// ONE call writes the match's questions with their options, ONE call fact-checks them.
-async function generateForMatch(category, count, seenIds, avoidList) {
+// Research (web) -> write questions -> fact-check. If too few pass, one more write + check round runs on the
+// same research (no new searches). Returns accepted, unused questions.
+async function generateForMatch(category, count) {
   const topic = nextTopic(category);
   const catName = CATEGORIES.find((c) => c.id === category).name;
   const facts = WEB_RESEARCH ? await research(catName, topic) : "";
+  if (WEB_RESEARCH && !facts) return []; // the match is filled from stored questions instead
   const source = facts
     ? "Build every question ONLY on the researched facts you are given. Never invent a fact."
     : "You have no web access: use ONLY facts you are completely certain of (long-documented records, dates, numbers, details). Never guess or invent a fact.";
   const system = GEN_SYSTEM.replace("Build every question ONLY on the researched facts you are given. Never invent a fact.", source);
+  // questions already used anywhere in this category — the model must not repeat them
+  const used = (pool[category] || []).filter((q) => q.used).slice(-60).map((q) => "- " + q.q).join("\n") || "(none yet)";
 
-  const gen = await client.messages.parse({
-    model: MODEL,
-    max_tokens: 3000,
-    thinking: NO_THINKING,
-    output_config: { effort: "medium", format: zodOutputFormat(GeneratedSchema) },
-    system,
-    messages: [{
-      role: "user",
-      content: `Category: ${catName}\nFocus topic: ${topic}\n${CATEGORY_RULES[category] ? `Extra rules: ${CATEGORY_RULES[category]}\n` : ""}${facts ? `\nRESEARCHED FACTS:\n${facts}\n` : ""}
-Write ${count + SPARE} questions, every one at the hardest expert level, each with exactly 3 wrong answers.
+  const accepted = [];
+  const tried = [];
+  for (let round = 0; round < 2 && accepted.length < count; round++) {
+    const want = count - accepted.length + SPARE;
+    const avoid = tried.length ? `\n\nThese were already written for this match; use DIFFERENT facts:\n${tried.map((q) => "- " + q).join("\n")}` : "";
+    const gen = await client.messages.parse({
+      model: MODEL,
+      max_tokens: 3500,
+      thinking: NO_THINKING,
+      output_config: { effort: "medium", format: zodOutputFormat(GeneratedSchema) },
+      system,
+      messages: [{
+        role: "user",
+        content: `Category: ${catName}\nFocus topic: ${topic}\n${CATEGORY_RULES[category] ? `Extra rules: ${CATEGORY_RULES[category]}\n` : ""}${facts ? `\nRESEARCHED FACTS:\n${facts}\n` : ""}
+Write ${want} questions, every one at the hardest expert level, each with exactly 3 wrong answers.
 
-These players have already seen the following questions; do not repeat or rephrase them:
-${avoidList}`,
-    }],
-  });
-  track(gen, "generate");
-  if (gen.stop_reason !== "end_turn" || !gen.parsed_output) {
-    console.warn(`[questions] generation for ${category} stopped: ${gen.stop_reason}`);
-    return [];
+These questions were already used and must never be repeated or rephrased:
+${used}${avoid}`,
+      }],
+    });
+    track(gen, "generate");
+    if (gen.stop_reason !== "end_turn" || !gen.parsed_output) {
+      console.warn(`[questions] generation for ${category} stopped: ${gen.stop_reason}`);
+      break;
+    }
+
+    const batchNorms = new Set();
+    const candidates = gen.parsed_output.questions.filter((q) => {
+      const n = norm(q.question);
+      const answers = [q.correct_answer, ...q.wrong_answers].map(norm);
+      const ok = q.wrong_answers.length === 3 && new Set(answers).size === 4 && !allNorms.has(n) && !batchNorms.has(n);
+      batchNorms.add(n);
+      return ok;
+    });
+    tried.push(...gen.parsed_output.questions.map((q) => q.question));
+    if (!candidates.length) {
+      console.warn(`[questions] ${category}: AI returned ${gen.parsed_output.questions.length} questions, none usable (bad options or already exist)`);
+      continue;
+    }
+
+    const listing = candidates
+      .map((q, i) => `${i + 1}. ${q.question}\n   Correct: ${q.correct_answer}\n   Wrong: ${q.wrong_answers.join(" | ")}`)
+      .join("\n");
+    const check = await client.messages.parse({
+      model: MODEL,
+      max_tokens: 2000,
+      thinking: NO_THINKING,
+      output_config: { effort: "medium", format: zodOutputFormat(VerdictSchema) },
+      system: VERIFY_SYSTEM,
+      messages: [{
+        role: "user",
+        content: `${facts ? `RESEARCHED FACTS:\n${facts}` : "No research is available: judge with your own knowledge and reject anything you are not completely sure of."}\n\nCheck these ${candidates.length} questions:\n\n${listing}`,
+      }],
+    });
+    track(check, "verify");
+    if (check.stop_reason !== "end_turn" || !check.parsed_output) {
+      console.warn(`[questions] verification for ${category} stopped: ${check.stop_reason}`);
+      continue;
+    }
+
+    const verdicts = check.parsed_output.verdicts;
+    const okNumbers = new Set(verdicts.filter((v) => v.ok).map((v) => v.number));
+    const passed = candidates
+      .filter((_, i) => okNumbers.has(i + 1))
+      .map((q) => ({
+        id: hashId(category, q.question), q: q.question, correct: q.correct_answer, wrong: q.wrong_answers,
+        difficulty: q.difficulty, source: "ai-match", web: !!facts, topic, v: 2, at: Date.now(),
+      }));
+    for (const q of passed) allNorms.add(norm(q.q));
+    pool[category].push(...passed);
+    savePool(category, passed);
+    accepted.push(...passed);
+    const problems = verdicts.filter((v) => !v.ok && v.problem).slice(0, 3).map((v) => v.problem);
+    console.log(
+      `[questions] ${category}/${topic} round ${round + 1}: ${passed.length}/${candidates.length} passed the fact-check (${gen.parsed_output.questions.length} written)` +
+        (problems.length ? ` — rejected e.g.: ${problems.join(" | ")}` : ""),
+    );
   }
-
-  const ids = new Set();
-  const candidates = gen.parsed_output.questions.filter((q) => {
-    const id = hashId(category, q.question);
-    const answers = [q.correct_answer, ...q.wrong_answers].map(norm);
-    const ok = q.wrong_answers.length === 3 && new Set(answers).size === 4 && !seenIds.has(id) && !ids.has(id);
-    ids.add(id);
-    return ok;
-  });
-  if (!candidates.length) {
-    console.warn(`[questions] ${category}: AI returned ${gen.parsed_output.questions.length} questions, none usable (bad options, duplicates or already seen)`);
-    return [];
-  }
-
-  const listing = candidates
-    .map((q, i) => `${i + 1}. ${q.question}\n   Correct: ${q.correct_answer}\n   Wrong: ${q.wrong_answers.join(" | ")}`)
-    .join("\n");
-  const check = await client.messages.parse({
-    model: MODEL,
-    max_tokens: 1000,
-    thinking: NO_THINKING,
-    output_config: { effort: "medium", format: zodOutputFormat(VerdictSchema) },
-    system: VERIFY_SYSTEM,
-    messages: [{
-      role: "user",
-      content: `${facts ? `RESEARCHED FACTS:\n${facts}` : "No research is available: judge with your own knowledge and reject anything you are not completely sure of."}\n\nCheck these ${candidates.length} questions:\n\n${listing}`,
-    }],
-  });
-  track(check, "verify");
-  if (check.stop_reason !== "end_turn" || !check.parsed_output) {
-    console.warn(`[questions] verification for ${category} stopped: ${check.stop_reason}`);
-    return [];
-  }
-
-  const okNumbers = new Set(check.parsed_output.verdicts.filter((v) => v.ok).map((v) => v.number));
-  const accepted = candidates
-    .filter((_, i) => okNumbers.has(i + 1))
-    .map((q) => ({
-      id: hashId(category, q.question), q: q.question, correct: q.correct_answer, wrong: q.wrong_answers,
-      difficulty: q.difficulty, source: "ai-match", topic, v: 2, at: Date.now(),
-    }));
-  pool[category].push(...accepted);
-  savePool(category, accepted);
-  console.log(`[questions] ${category}/${topic}: ${accepted.length} accepted, ${candidates.length - accepted.length} rejected by fact-check`);
   return accepted;
 }
 
-// Called once when a match starts. This is the ONLY place the AI runs.
-export async function questionsForMatch(category, count, seenSets = []) {
+// One AI run per match. Started as soon as a player joins the queue (prefetch), consumed when the match starts.
+const prepared = new Map(); // category -> Promise<accepted questions>
+
+function produce(category, count) {
+  if (!client || aiDisabledReason) return Promise.resolve([]);
+  if (overDailyCap()) {
+    console.warn(`[questions] daily AI cap reached (${usage.batches} matches, $${usage.usd.toFixed(2)}) — stored questions only`);
+    return Promise.resolve([]);
+  }
+  usage.batches++;
+  const usdBefore = usage.usd;
+  const started = Date.now();
+  return generateForMatch(category, count)
+    .catch((err) => {
+      handleAiError(err);
+      return [];
+    })
+    .then((items) => {
+      console.log(`[questions] ${category}: AI run done in ${((Date.now() - started) / 1000).toFixed(1)}s, ≈ $${(usage.usd - usdBefore).toFixed(4)}`);
+      return items;
+    });
+}
+
+// Called when a player joins a queue: start this category's AI run early to hide the wait.
+export function prefetch(category, count) {
+  if (category === "math" || prepared.has(category)) return;
+  console.log(`[questions] ${category}: AI run started for the lobby`);
+  prepared.set(category, produce(category, count));
+}
+
+// Called when a match starts. Never returns a question that was used before, anywhere.
+// deadlineAt: if the AI isn't done by then, the match starts with stored questions; the AI run keeps going in the
+// background and its questions stay in the pool for later matches.
+export async function questionsForMatch(category, count, deadlineAt = Infinity) {
   if (category === "math") return Array.from({ length: count }, (_, i) => mathQuestion(i));
   const started = Date.now();
-  const usdBefore = usage.usd;
-  const seenIds = new Set(seenSets.flatMap((s) => [...s]));
-  let items = [];
-
-  if (!client || aiDisabledReason) {
-    // no AI available: stored questions only
-  } else if (overDailyCap()) {
-    console.warn(`[questions] daily AI cap reached (${usage.batches} matches, $${usage.usd.toFixed(2)}) — using stored questions`);
-  } else {
-    usage.batches++;
-    try {
-      const avoid = (pool[category] || []).filter((q) => seenIds.has(q.id)).slice(-40).map((q) => "- " + q.q).join("\n") || "(none yet)";
-      items = await generateForMatch(category, count, seenIds, avoid);
-    } catch (err) {
-      handleAiError(err);
-    }
-  }
-
-  const fromAi = Math.min(items.length, count);
-  if (items.length < count) items = [...items, ...storedUnseen(category, count - items.length, [...seenSets, new Set(items.map((x) => x.id))])];
-  console.log(`[match-questions] ${category}: ${fromAi} new from AI + ${Math.min(count, items.length) - fromAi} stored, ready in ${((Date.now() - started) / 1000).toFixed(1)}s, ≈ $${(usage.usd - usdBefore).toFixed(4)}`);
-  return shuffle(items.slice(0, count)).map(toMatchQuestion);
+  const run = prepared.get(category) ?? produce(category, count);
+  prepared.delete(category);
+  let timer;
+  const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve(null), Math.max(0, deadlineAt - Date.now())); });
+  const done = await Promise.race([run, timeout]);
+  clearTimeout(timer);
+  if (!done) console.warn(`[questions] ${category}: AI not ready by the lobby limit — starting with stored questions`);
+  const fresh = (done || []).filter((q) => !q.used);
+  let items = fresh.slice(0, count);
+  const fromAi = items.length;
+  // this run's own questions are already in the pool, so leave them out of the top-up
+  if (items.length < count) items = [...items, ...storedUnused(category, count - items.length, items)];
+  markUsed(items);
+  console.log(`[match-questions] ${category}: ${fromAi} new + ${items.length - fromAi} stored unused, ready ${((Date.now() - started) / 1000).toFixed(1)}s after match start`);
+  return shuffle(items).map(toMatchQuestion);
 }
 
 export function aiStatus() {
-  return aiDisabledReason ? `off (${aiDisabledReason})` : `on (${MODEL}, only when a match starts${WEB_RESEARCH ? ", with web research" : ""})`;
+  return aiDisabledReason ? `off (${aiDisabledReason})` : `on (${MODEL}, per match${WEB_RESEARCH ? " with web research" : ""})`;
 }
 
-// Nothing runs in the background any more; kept so the server can log the setup.
+// Nothing runs in the background; kept so the server can log the setup.
 export function warmUp() {
-  console.log(`[questions] AI runs only when a match starts. Daily cap: ${DAILY_BATCH_CAP} matches or $${DAILY_COST_CAP}.`);
+  console.log(`[questions] AI runs per match (prefetched when a player joins a queue). Daily cap: ${DAILY_BATCH_CAP} runs or $${DAILY_COST_CAP}.`);
 }

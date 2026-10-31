@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import { sfx } from "@/lib/sound";
 import type { MatchState } from "../GameApp";
 import Avatar from "../Avatar";
+import CanvasText from "../CanvasText";
 
 const KEYS = ["A", "B", "C", "D"];
 const isMath = (t: string) => /^[\d\s+−×÷=?]+$/.test(t);
@@ -12,6 +13,9 @@ const isMath = (t: string) => /^[\d\s+−×÷=?]+$/.test(t);
 export default function Match({ state, onAnswer }: { state: MatchState; onAnswer: (i: number) => void }) {
   const { found, question: q, reveal, myChoice, oppAnswered, results, scores } = state;
   const [left, setLeft] = useState(q?.seconds ?? found.seconds);
+  // matches the 1024px breakpoint in globals.css
+  const [wide, setWide] = useState(false);
+  useEffect(() => setWide(window.matchMedia("(min-width: 1024px)").matches), []);
 
   // Local countdown display; the server is the real clock.
   useEffect(() => {
@@ -31,7 +35,7 @@ export default function Match({ state, onAnswer }: { state: MatchState; onAnswer
   const myPoints = reveal?.you.points ?? 0;
 
   return (
-    <section className="screen">
+    <section className="screen no-select">
       <div className="scorebar">
         <div className="pscore you">
           <Avatar name={found.you.name} avatar={found.you.avatar} size="sm" />
@@ -81,7 +85,14 @@ export default function Match({ state, onAnswer }: { state: MatchState; onAnswer
             <p className="q-count">
               Sawal {q.index + 1}/{q.total}
             </p>
-            <h2 className={isMath(q.text) ? "math" : ""}>{q.text}</h2>
+            {/* drawn on a canvas so it can't be copied or read by page tools */}
+            <div className="q-text">
+              {isMath(q.text) ? (
+                <CanvasText text={q.text} size={40} weight={800} align="center" />
+              ) : (
+                <CanvasText text={q.text} size={wide ? 26 : 21} align="center" />
+              )}
+            </div>
           </div>
 
           <div className="options" key={`o${q.index}`}>
@@ -94,7 +105,9 @@ export default function Match({ state, onAnswer }: { state: MatchState; onAnswer
               return (
                 <button key={i} className={cls} disabled={myChoice !== null || !!reveal} onClick={() => onAnswer(i)}>
                   <span className="key">{KEYS[i]}</span>
-                  <span>{opt}</span>
+                  <span className="opt-text">
+                    <CanvasText text={opt} size={16} weight={600} />
+                  </span>
                   {reveal && reveal.opponent.choice === i && (
                     <span className="opp-pick" title="Muqabil ka jawab">
                       <Avatar name={found.opponent.name} avatar={found.opponent.avatar} size="sm" />

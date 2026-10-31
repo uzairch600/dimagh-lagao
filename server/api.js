@@ -50,8 +50,9 @@ const config = () => ({
   tiers: game.ENTRY_TIERS.map((entry) => ({ entry, prize: game.prizeFor(entry) })),
   questions: game.QUESTIONS_PER_MATCH,
   seconds: game.SECONDS_PER_QUESTION,
+  rake: game.RAKE,
+  scoring: { max: game.MAX_POINTS, min: game.MIN_POINTS, fullMs: game.FULL_POINTS_MS },
   minWithdraw: MIN_WITHDRAW,
-  houseMaxEntry: game.HOUSE_MAX_ENTRY,
   houseWaitSeconds: game.HOUSE_WAIT_SECONDS,
   avatars: AVATARS,
 });
@@ -188,10 +189,7 @@ export function attachRealtime(httpServer) {
       const result = game.joinQueue(socket, db.getUser(userId), { category: payload?.category, entry: Number(payload?.entry) });
       cb?.(result);
     });
-    socket.on("queue:leave", (_, cb) => {
-      game.leaveQueue(userId);
-      cb?.({ ok: true });
-    });
+    socket.on("queue:leave", (_, cb) => cb?.(game.cancelSearch(userId)));
     socket.on("house:start", (payload, cb) => {
       cb?.(game.startHouse(socket, db.getUser(userId), { category: payload?.category, entry: Number(payload?.entry) }));
     });
@@ -199,6 +197,7 @@ export function attachRealtime(httpServer) {
       cb?.(game.startPractice(socket, db.getUser(userId), { category: payload?.category }));
     });
     socket.on("match:answer", (payload) => game.answer(userId, payload || {}));
+    socket.on("match:strike", (payload) => game.strike(userId, payload || {}));
     socket.on("disconnect", () => game.handleDisconnect(userId));
   });
 }

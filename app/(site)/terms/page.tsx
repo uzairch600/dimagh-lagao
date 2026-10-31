@@ -37,7 +37,7 @@ export default function Terms() {
 
           <h2>3. Wallet, entry fees and prizes</h2>
           <ul>
-            <li>Paid matches require an entry fee, which is deducted from your wallet when the match starts.</li>
+            <li>Paid matches require an entry fee, which is deducted from your wallet when you press Start and join the lobby.</li>
             <li>
               The prize equals both entry fees minus a platform fee of {SITE.platformFeePercent}%. The prize for each entry
               level is shown before you join.
@@ -68,6 +68,15 @@ export default function Terms() {
             <li>Creating or using more than one account, or using someone else&apos;s account.</li>
             <li>Colluding with another player, including deliberately losing.</li>
             <li>Using bots, scripts, automation or any tool that answers for you.</li>
+            <li>
+              During a match: switching tab or window, leaving full screen, opening developer tools, or running browser
+              extensions. A player caught doing this loses the match at once and the opponent wins. If both players are caught,
+              both lose and the platform keeps both entry fees.
+            </li>
+            <li>
+              If a paid winner&apos;s answers show a suspicious pattern (for example nearly all right but nearly always late, or
+              identical timing across matches), the prize is held for review instead of being paid at once.
+            </li>
             <li>Exploiting bugs or interfering with the Platform.</li>
             <li>Depositing funds that are not yours or that come from illegal activity.</li>
           </ul>
@@ -81,8 +90,9 @@ export default function Terms() {
 
           <h2>8. Technical problems</h2>
           <p>
-            If a match cannot be completed because of a fault on our side, the entry fees for that match are refunded. Problems
-            with your own device or internet connection do not stop a match; unanswered questions score zero.
+            If a match cannot be completed because of a fault on our side, the entry fees for that match are refunded. The entry
+            fee is charged when you join the lobby and cannot be cancelled. If you leave the lobby or match, or disconnect and do
+            not return within 10 seconds, you lose and the entry is not refunded.
           </p>
 
           <h2>9. Taxes</h2>

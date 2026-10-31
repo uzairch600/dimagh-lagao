@@ -19,6 +19,8 @@ import Result from "./screens/Result";
 import Wallet from "./screens/Wallet";
 import Leaderboard from "./screens/Leaderboard";
 import Profile from "./screens/Profile";
+import RulesSheet from "./screens/RulesSheet";
+import { enterFullscreen, startAntiCheat } from "@/lib/anticheat";
 
 export type MatchState = {
   found: MatchFound;
@@ -41,7 +43,7 @@ export default function GameApp() {
   const [screen, setScreen] = useState<Screen>("login");
   const [sheet, setSheet] = useState<React.ReactNode>(null);
   const [toast, setToastState] = useState<ToastState>(null);
-  const [searching, setSearching] = useState<{ category: Category; entry: number; prize: number; since: number } | null>(null);
+  const [searching, setSearching] = useState<{ category: Category; entry: number; prize: number; since: number; practice?: boolean } | null>(null);
   const [match, setMatch] = useState<MatchState | null>(null);
   const [end, setEnd] = useState<MatchEnd | null>(null);
   const [lastPlay, setLastPlay] = useState<LastPlay | null>(null);
@@ -92,11 +94,6 @@ export default function GameApp() {
       setScreen(f.resumed ? "match" : "versus");
     });
 
-    s.on("match:ready", ({ total }: { total: number }) => {
-      sfx.found();
-      setMatch((m) => (m ? { ...m, found: { ...m.found, preparing: false, total } } : m));
-    });
-
     s.on("match:cancelled", ({ reason, balance }: { reason: string; balance: number }) => {
       setMatch(null);
       setUser((u) => (u ? { ...u, balance } : u));
@@ -131,6 +128,21 @@ export default function GameApp() {
       refreshMe().catch(() => {});
     });
 
+    // back in the lobby after a refresh or reconnect
+    s.on("queue:resume", (q: { category: string; entry: number; prize: number; since: number }) => {
+      setConfig((cfg) => {
+        const category = cfg?.categories.find((c) => c.id === q.category);
+        if (category) {
+          setSearching({ category, entry: q.entry, prize: q.prize, since: q.since });
+          setScreen("searching");
+        }
+        return cfg;
+      });
+    });
+
+    s.on("match:opponentLeft", ({ seconds }: { seconds: number }) => notify(`Muqabil ka connection gaya — ${seconds} second mein wapas na aaya to aap jeet jayenge`));
+    s.on("match:opponentBack", () => notify("Muqabil wapas aa gaya"));
+
     s.on("queue:cancelled", ({ reason }: { reason: string }) => {
       setSearching(null);
       setScreen("home");
@@ -149,7 +161,6 @@ export default function GameApp() {
       .then((d) => {
         setScreen("home");
         connectSocket();
-        if (d.status === "searching") notify("Pichli talaash cancel ho gayi");
       })
       .catch(() => logout())
       .finally(() => setBooting(false));
@@ -178,21 +189,22 @@ export default function GameApp() {
   const joinQueue = (category: Category, entry: number) => {
     const tier = config!.tiers.find((t) => t.entry === entry)!;
     setLastPlay({ category, entry });
-    socketRef.current?.emit("queue:join", { category: category.id, entry }, (res: { error?: string; waiting?: boolean }) => {
+    socketRef.current?.emit("queue:join", { category: category.id, entry }, (res: { error?: string; balance?: number }) => {
       if (res?.error) return notify(res.error, "error");
       setSheet(null);
-      if (res?.waiting) {
-        setSearching({ category, entry, prize: tier.prize, since: Date.now() });
-        setScreen("searching");
-      }
+      if (typeof res.balance === "number") setUser((u) => (u ? { ...u, balance: res.balance! } : u));
+      setSearching({ category, entry, prize: tier.prize, since: Date.now() });
+      setScreen("searching");
     });
   };
 
   const startPractice = (category: Category) => {
     setLastPlay({ category, entry: null });
     socketRef.current?.emit("practice:start", { category: category.id }, (res: { error?: string }) => {
-      if (res?.error) notify(res.error, "error");
-      else setSheet(null);
+      if (res?.error) return notify(res.error, "error");
+      setSheet(null);
+      setSearching({ category, entry: 0, prize: 0, since: Date.now(), practice: true });
+      setScreen("searching");
     });
   };
 
@@ -200,13 +212,6 @@ export default function GameApp() {
     if (!searching) return;
     socketRef.current?.emit("house:start", { category: searching.category.id, entry: searching.entry }, (res: { error?: string }) => {
       if (res?.error) notify(res.error, "error");
-    });
-  };
-
-  const cancelSearch = () => {
-    socketRef.current?.emit("queue:leave", null, () => {
-      setSearching(null);
-      setScreen("home");
     });
   };
 
@@ -219,8 +224,28 @@ export default function GameApp() {
 
   const playAgain = () => {
     if (!lastPlay) return go("home");
-    if (lastPlay.entry === null) startPractice(lastPlay.category);
-    else joinQueue(lastPlay.category, lastPlay.entry);
+    showRules(lastPlay.category, lastPlay.entry);
+  };
+
+  // Every match starts from the rules screen; the player must tick "I agree".
+  const showRules = (category: Category, entry: number | null) => {
+    const prize = entry ? config!.tiers.find((t) => t.entry === entry)?.prize ?? 0 : 0;
+    setSheet(
+      <RulesSheet
+        categoryName={category.name}
+        entry={entry}
+        prize={prize}
+        seconds={config!.seconds}
+        rake={config!.rake}
+        scoring={config!.scoring}
+        onBack={() => openPlaySheet(category)}
+        onStart={() => {
+          enterFullscreen();
+          if (entry === null) startPractice(category);
+          else joinQueue(category, entry);
+        }}
+      />,
+    );
   };
 
   const openPlaySheet = (category: Category) => {
@@ -230,8 +255,8 @@ export default function GameApp() {
         category={category}
         config={config!}
         balance={user!.balance}
-        onPlay={(entry) => joinQueue(category, entry)}
-        onPractice={() => startPractice(category)}
+        onPlay={(entry) => showRules(category, entry)}
+        onPractice={() => showRules(category, null)}
         onAddMoney={() => {
           setSheet(null);
           go("wallet");
@@ -240,6 +265,13 @@ export default function GameApp() {
     );
   };
 
+  const matchId = match?.found.matchId;
+  const inMatch = !!matchId && (screen === "versus" || screen === "match");
+  useEffect(() => {
+    if (!inMatch) return;
+    return startAntiCheat((reason) => socketRef.current?.emit("match:strike", { matchId, reason }));
+  }, [inMatch, matchId]);
+
   // ---------- render ----------
   if (booting) return <div className="spinner" />;
 
@@ -247,7 +279,7 @@ export default function GameApp() {
 
   return (
     <>
-      <main className={`app ${showNav ? "" : "no-nav"}`}>
+      <main className={`app ${showNav ? "" : "no-nav"}`} data-app>
         {screen === "login" && <Login onLoggedIn={onLoggedIn} notify={notify} />}
         {user && config && (
           <>
@@ -256,11 +288,11 @@ export default function GameApp() {
             {screen === "searching" && searching && (
               <Searching
                 info={searching} name={user.name} avatar={user.avatar}
-                houseMaxEntry={config.houseMaxEntry} houseWaitSeconds={config.houseWaitSeconds}
-                onCancel={cancelSearch} onPlayComputer={startHouse}
+                houseWaitSeconds={config.houseWaitSeconds}
+                onPlayComputer={startHouse}
               />
             )}
-            {screen === "versus" && match && <Versus key={match.found.preparing ? "prep" : "go"} found={match.found} />}
+            {screen === "versus" && match && <Versus found={match.found} />}
             {screen === "match" && match && <Match state={match} onAnswer={answer} />}
             {screen === "result" && end && <Result end={end} user={user} found={match?.found ?? null} onAgain={playAgain} onHome={() => go("home")} />}
             {screen === "wallet" && <Wallet user={user} config={config} setSheet={setSheet} notify={notify} refreshMe={refreshMe} />}

@@ -15,7 +15,7 @@ const SEEN_HISTORY = 400; // how many recent question ids we remember per player
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-const empty = () => ({ users: {}, transactions: [], matches: [], withdrawals: [], messages: [], house: { id: "house", net: 0, matches: 0 } });
+const empty = () => ({ users: {}, transactions: [], matches: [], withdrawals: [], messages: [], flags: [], house: { id: "house", net: 0, matches: 0 } });
 
 let data = empty();
 let fileData = null;
@@ -32,8 +32,8 @@ const byAt = (a, b) => (a.at ?? 0) - (b.at ?? 0);
 
 if (store.enabled) {
   await store.init();
-  const [users, transactions, matches, withdrawals, messages, kv] = await Promise.all(
-    ["users", "transactions", "matches", "withdrawals", "messages", "kv"].map((t) => store.loadAll(t)),
+  const [users, transactions, matches, withdrawals, messages, kv, flags] = await Promise.all(
+    ["users", "transactions", "matches", "withdrawals", "messages", "kv", "flags"].map((t) => store.loadAll(t)),
   );
   if (users.length === 0 && fileData && Object.keys(fileData.users).length) {
     // first run against an empty database: carry over the local test data
@@ -50,6 +50,7 @@ if (store.enabled) {
     data.matches = matches.sort(byAt);
     data.withdrawals = withdrawals.sort(byAt);
     data.messages = messages.sort(byAt);
+    data.flags = flags.sort(byAt);
     data.house = kv.find((r) => r.id === "house") || data.house;
   }
 } else if (fileData) {
@@ -231,4 +232,55 @@ export function saveMessage(msg) {
   const m = { id: newId(), ...msg, at: Date.now(), status: "new" };
   data.messages.push(m);
   save("messages", m);
+}
+
+// Anti-cheat log: strikes (tab switch, devtools...) and suspicious timing patterns.
+export function flag(entry) {
+  const f = { id: newId(), at: Date.now(), ...entry };
+  (data.flags ||= []).push(f);
+  save("flags", f);
+  return f;
+}
+
+// Every question id any player has ever been shown (to retire them globally).
+export function allSeenIds() {
+  const ids = new Set();
+  for (const u of Object.values(data.users)) for (const id of u.seen || []) ids.add(id);
+  return ids;
+}
+
+// Keeps each player's average answer time for the last few matches (cross-match timing check).
+export function recordTiming(userId, avgMs) {
+  const u = data.users[userId];
+  if (!u) return [];
+  u.timings = [...(u.timings || []), Math.round(avgMs)].slice(-5);
+  save("users", u);
+  return u.timings;
+}
+
+// Entries the platform keeps when players leave the lobby or cheat (no winner to pay).
+// A winner whose answers look suspicious waits for a review instead of being paid at once.
+export function holdPrize({ userId, matchId, amount, house, reasons }) {
+  return flag({ type: "prize-held", status: "pending", userId, matchId, amount, house: !!house, reasons });
+}
+
+// Review outcome for a held prize: pay it, or keep it (the player then counts as having won nothing).
+export function reviewHeldPrize(flagId, approve) {
+  const f = (data.flags || []).find((x) => x.id === flagId && x.type === "prize-held" && x.status === "pending");
+  if (!f) throw new Error("no pending held prize with that id");
+  if (approve) {
+    addTransaction(f.userId, "prize", f.amount, "Match inaam (review ke baad)");
+    const u = data.users[f.userId];
+    if (u) { u.earnings += f.amount; save("users", u); }
+    if (f.house) addHouse(-f.amount);
+  } else if (!f.house) addForfeited(f.amount);
+  f.status = approve ? "paid" : "rejected";
+  f.reviewedAt = Date.now();
+  save("flags", f);
+  return f;
+}
+
+export function addForfeited(amount) {
+  data.house.forfeited = (data.house.forfeited || 0) + amount;
+  save("kv", data.house);
 }

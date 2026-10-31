@@ -7,8 +7,9 @@ export type Config = {
   tiers: Tier[];
   questions: number;
   seconds: number;
+  rake: number;
+  scoring: { max: number; min: number; fullMs: number };
   minWithdraw: number;
-  houseMaxEntry: number;
   houseWaitSeconds: number;
   avatars: string[];
 };
@@ -60,7 +61,6 @@ export type MatchFound = {
   total: number;
   seconds: number;
   resumed?: boolean;
-  preparing?: boolean;
   you: PlayerInfo;
   opponent: PlayerInfo;
   balance: number;
@@ -80,10 +80,14 @@ export type MatchEnd = {
   outcome: "win" | "loss" | "draw";
   prize: number;
   entry: number;
+  rake?: number;
+  held?: boolean;
   you: { score: number; correct: number };
   opponent: { name: string; score: number; correct: number };
   total: number;
   balance: number;
+  forfeit?: { by: "you" | "opponent" | "both"; reason: string } | null;
+  void?: boolean;
 };
 
 export type Screen = "login" | "home" | "play" | "searching" | "versus" | "match" | "result" | "wallet" | "leaderboard" | "profile";

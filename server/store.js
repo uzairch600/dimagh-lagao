@@ -7,7 +7,7 @@ import pg from "pg";
 const url = process.env.DATABASE_URL || "";
 export const enabled = !!url && !url.includes("[YOUR-PASSWORD]");
 
-const TABLES = ["users", "transactions", "matches", "withdrawals", "messages", "kv"];
+const TABLES = ["users", "transactions", "matches", "withdrawals", "messages", "kv", "flags"];
 let pool = null;
 
 export async function init() {
@@ -22,6 +22,12 @@ export async function init() {
   );
   await pool.query("alter table app.questions enable row level security");
   await pool.query("create index if not exists questions_category on app.questions (category)");
+  // A question may exist only once (by normalised text) across ALL categories, and is retired once used.
+  await pool.query("alter table app.questions add column if not exists norm text");
+  await pool.query("alter table app.questions add column if not exists used_at timestamptz");
+  await pool.query("update app.questions set norm = trim(regexp_replace(lower(data->>'q'), '[^a-z0-9]+', ' ', 'g')) where norm is null");
+  await pool.query("delete from app.questions a using app.questions b where a.norm = b.norm and a.ctid > b.ctid");
+  await pool.query("create unique index if not exists questions_norm_unique on app.questions (norm)");
 }
 
 export async function loadAll(table) {
@@ -61,20 +67,26 @@ export async function flush() {
 }
 
 export async function loadQuestions() {
-  const r = await pool.query("select category, data from app.questions");
+  const r = await pool.query("select category, data, used_at from app.questions");
   const out = {};
-  for (const { category, data } of r.rows) (out[category] ||= []).push(data);
+  for (const { category, data, used_at } of r.rows) (out[category] ||= []).push({ ...data, used: !!used_at });
   return out;
 }
+
+// Retire questions forever once they have been shown in a match.
+export async function markQuestionsUsed(ids) {
+  if (!ids.length) return;
+  await pool.query("update app.questions set used_at = coalesce(used_at, now()) where id = any($1)", [ids]);
+}
+
+export const normText = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 export async function saveQuestions(category, items) {
   for (let i = 0; i < items.length; i += 200) {
     const chunk = items.slice(i, i + 200);
-    const params = chunk.map((_, j) => `($${j * 3 + 1}, $${j * 3 + 2}, $${j * 3 + 3})`).join(",");
-    const values = chunk.flatMap((q) => [q.id, category, JSON.stringify(q)]);
-    await pool.query(
-      `insert into app.questions (id, category, data) values ${params} on conflict (id) do update set category = excluded.category, data = excluded.data`,
-      values,
-    );
+    const params = chunk.map((_, j) => `($${j * 4 + 1}, $${j * 4 + 2}, $${j * 4 + 3}, $${j * 4 + 4})`).join(",");
+    const values = chunk.flatMap((q) => [q.id, category, normText(q.q), JSON.stringify(q)]);
+    // duplicates (same id or same normalised text) are silently skipped
+    await pool.query(`insert into app.questions (id, category, norm, data) values ${params} on conflict do nothing`, values);
   }
 }

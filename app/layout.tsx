@@ -41,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={poppins.variable}>
       <body>
-        <div className="bg-orbs" aria-hidden="true">
+        <div className="bg-orbs" aria-hidden="true" data-app>
           <span />
           <span />
           <span />

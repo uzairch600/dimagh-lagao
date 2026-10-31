@@ -17,7 +17,7 @@ const CATEGORIES = [
 const STEPS = [
   { icon: Smartphone, title: "Account banayein", text: "Sirf mobile number aur 4-digit PIN. 30 second ka kaam." },
   { icon: Wallet, title: "Category aur entry chunein", text: "Rs 20 se Rs 500 tak. Jitni entry, utna bada inaam." },
-  { icon: Swords, title: "Live 1v1 muqabla", text: "Dono players ko same 10 sawal. Sahi aur tez jawab = zyada points." },
+  { icon: Swords, title: "Live 1v1 muqabla", text: "Dono players ko same 10 sawal. Jitna tez sahi jawab, utne zyada points." },
   { icon: Trophy, title: "Inaam jeetein", text: "Jeetne wale ko poora inaam foran wallet mein." },
 ];
 
@@ -25,7 +25,7 @@ const FEATURES = [
   { icon: Users, title: "Asli players", text: "Aap ka muqabla asli logon se hota hai. Agar 30 second mein koi na mile, to app khud aap ke saath khelti hai — saaf likh kar." },
   { icon: Clock, title: "Server ki ghari", text: "Waqt aur sahi jawab hamare server par rehte hain — koi cheat nahi kar sakta." },
   { icon: Lock, title: "Mehfooz account", text: "PIN encrypted rehta hai, aur har paisa wallet history mein dikhta hai." },
-  { icon: ShieldCheck, title: "Saaf hisaab", text: `Platform sirf ${SITE.platformFeePercent}% leta hai. Baqi poora pot jeetne wale ka.` },
+  { icon: ShieldCheck, title: "Saaf hisaab", text: `Platform fee ${SITE.platformFeePercent}%, har match se pehle saaf likhi hui. Baqi ${100 - SITE.platformFeePercent}% jeetne wale ka.` },
 ];
 
 export default function Landing() {
@@ -45,7 +45,7 @@ export default function Landing() {
             </h1>
             <p className="lead">
               Asli players ke saath live quiz battle. Pakistan aur duniya ki GK, cricket, science, IT, AI aur entertainment — jo sahi aur sab se tez jawab de,
-              wohi jeete. <b>Rs 900 tak</b> ek match mein.
+              wohi jeete. <b>Rs 700 tak</b> ek match mein.
             </p>
             <div className="hero-ctas">
               <Link href="/play" className="btn btn-gold btn-lg">
@@ -57,7 +57,7 @@ export default function Landing() {
             </div>
             <ul className="hero-points">
               <li><ShieldCheck size={16} /> Skill game — qismat nahi</li>
-              <li><Clock size={16} /> 3-4 minute ka match</li>
+              <li><Clock size={16} /> 2 minute ka match</li>
               <li><Smartphone size={16} /> Mobile aur desktop dono par</li>
             </ul>
           </div>
@@ -65,7 +65,7 @@ export default function Landing() {
           <div className="hero-visual" aria-hidden="true">
             <img className="hero-art-img" src="/images/hero.webp" alt="" width={1408} height={768} />
             <div className="float-card fc1">
-              <Trophy size={18} /> <span><b>+Rs 90</b> jeeta</span>
+              <Trophy size={18} /> <span><b>+Rs 70</b> jeeta</span>
             </div>
             <div className="float-card fc2">
               <Bot size={18} /> <span>30s mein player na mile to <b>app khelegi</b></span>

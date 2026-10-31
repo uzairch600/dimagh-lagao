@@ -13,7 +13,7 @@ const ITEMS: { id: Screen; icon: LucideIcon; label: string }[] = [
 // Bottom tab bar on phones; turns into a left sidebar on desktop (see globals.css).
 export default function BottomNav({ screen, go }: { screen: Screen; go: (s: Screen) => void }) {
   return (
-    <nav className="bottom-nav">
+    <nav className="bottom-nav" data-app>
       <Link href="/" className="nav-brand">
         <img className="site-logo-mark" src="/images/app-icon.webp" alt="" width={40} height={40} />
         <span>

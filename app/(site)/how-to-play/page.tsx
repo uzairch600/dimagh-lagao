@@ -51,17 +51,17 @@ export default function HowToPlay() {
 
             <h2>4. Muqabil se match</h2>
             <p>
-              App aap ko usi category aur usi entry wale kisi asli player se milaati hai. Entry fee tab hi kat ti hai jab match
-              shuru ho. Agar <b>30 second</b> mein koi player na mile, to app khud <b>&quot;Computer&quot;</b> ban kar aap ke saath
-              khelti hai aur aap ke muqable mein utni hi raqam lagati hai (Rs 100 tak ki entry par). Computer hamesha
+              App aap ko usi category aur usi entry wale kisi asli player se milaati hai. Start dabate hi entry fee kat jati hai aur
+              lobby se wapsi nahi hoti. Agar <b>30 second</b> mein koi player na mile, to app khud <b>&quot;Computer&quot;</b> ban kar aap ke saath
+              khelti hai aur aap ke muqable mein utni hi raqam lagati hai (har entry par). Computer hamesha
               &quot;Computer&quot; naam aur robot icon ke saath dikhta hai.
             </p>
 
             <h2>5. Scoring</h2>
-            <p>Dono players ko bilkul same 10 sawal, same order mein milte hain. Har sawal ke liye 20 second.</p>
+            <p>Dono players ko bilkul same 10 sawal, same order mein milte hain. Har sawal ke liye 10 second.</p>
             <ul>
-              <li><b>Sahi jawab:</b> 100 points</li>
-              <li><b>Speed bonus:</b> jitna jaldi, utna zyada — 0 se 100 extra points</li>
+              <li><b>Sahi jawab 2 second ke andar:</b> 100 points</li>
+              <li><b>Us ke baad:</b> har second ke saath kam, aakhri second par 10 points</li>
               <li><b>Ghalat ya time khatam:</b> 0 points</li>
             </ul>
             <p>10 sawal ke baad jiske points zyada, wohi jeeta. Barabar points par dono ki entry wapas.</p>
@@ -74,8 +74,8 @@ export default function HowToPlay() {
           </article>
 
           <aside className="side-cards">
-            <div className="side-card"><Timer size={22} /><b>10 sawal × 20 second</b><p>Poora match taqreeban 3-4 minute.</p></div>
-            <div className="side-card"><Target size={22} /><b>Sahi + tez = jeet</b><p>Har sahi jawab par speed bonus.</p></div>
+            <div className="side-card"><Timer size={22} /><b>10 sawal × 10 second</b><p>Poora match taqreeban 2 minute.</p></div>
+            <div className="side-card"><Target size={22} /><b>Sahi + tez = jeet</b><p>Jitna tez sahi jawab, utne zyada points.</p></div>
             <div className="side-card"><Bot size={22} /><b>30 second rule</b><p>Player na mile to app khud khelti hai.</p></div>
             <div className="side-card"><Wallet size={22} /><b>Draw par refund</b><p>Barabar points par entry wapas.</p></div>
             <div className="side-card"><Clock size={22} /><b>Practice free</b><p>Computer ke saath free practice, koi paisa nahi.</p></div>

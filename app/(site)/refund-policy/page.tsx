@@ -30,14 +30,19 @@ export default function Refund() {
             <li><b>Fault on our side:</b> if a match cannot be completed because of our server error, entry fees are refunded.</li>
             <li><b>Confirmed question error:</b> the affected match may be voided and entries refunded (see Terms, Section 7).</li>
             <li>
-              <b>Your own connection or device:</b> not a reason for refund — the match continues and unanswered questions score
-              zero.
+              <b>Your own connection or device:</b> not a reason for refund. If you disconnect you have 10 seconds to come
+              back; otherwise you lose the match and your opponent wins.
             </li>
             <li>Entry fees for completed matches are not refundable.</li>
+            <li><b>Cheating:</b> a player caught cheating loses the match and the entry. If both players are caught, both lose and the platform keeps both entries.</li>
           </ul>
 
-          <h2>3. Searching for an opponent</h2>
-          <p>Your entry fee is only deducted when a match starts. Cancelling a search costs nothing.</p>
+          <h2>3. Joining the lobby</h2>
+          <p>
+            Your entry fee is deducted when you press Start and join the lobby. There is no cancel after that. If you leave the
+            lobby or the match, the entry is not refunded and your opponent wins. If the match cannot start because of a fault
+            on our side, the entry is refunded.
+          </p>
 
           <h2>4. Withdrawals</h2>
           <ul>

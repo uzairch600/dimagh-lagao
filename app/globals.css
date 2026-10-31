@@ -735,8 +735,37 @@ img.site-logo-mark { padding: 0; object-fit: cover; }
   .dash-simple .dash-play { grid-column: 1 / -1; }
 }
 
-/* "preparing your questions" while the AI writes this match's questions */
-.prep { display: grid; justify-items: center; gap: 8px; margin-top: 14px; text-align: center; }
-.prep-spinner { width: 54px; height: 54px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--gold); border-right-color: var(--purple); animation: spin 0.9s linear infinite; }
-.prep b { font-size: 17px; animation: enter 0.4s; }
-.prep small { color: var(--muted); font-size: 12.5px; }
+/* rules screen before every match */
+.rules { display: grid; gap: 10px; margin: 14px 0 16px; }
+.rule { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+.rule svg { color: var(--gold); flex-shrink: 0; margin-top: 2px; }
+.rule span { display: grid; gap: 3px; }
+.rule b { font-size: 14px; font-weight: 600; line-height: 1.45; }
+.rule small { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.agree { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.agree input { width: 20px; height: 20px; accent-color: var(--gold); flex-shrink: 0; }
+.agree i { color: var(--muted); font-style: normal; font-weight: 500; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.rules-back { margin-top: 8px; }
+
+/* lobby: entry already paid, no way back */
+.lobby-lock { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+
+/* question + options drawn on canvas; no selecting or copying during a match */
+.no-select, .no-select * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.q-text { width: 100%; }
+.q-text canvas, .opt-text canvas { display: block; }
+.option .opt-text { flex: 1; min-width: 0; }
+
+.result-note { max-width: 420px; text-align: center; font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 14px; margin: -4px 0 6px; }
+.result-note.good { color: var(--green); background: rgba(24, 226, 155, 0.1); }
+.result-note.bad { color: var(--red); background: rgba(255, 77, 109, 0.1); }
+
+/* entry, fee and prize before Start; fee line on the result */
+.fee-box { display: grid; gap: 6px; padding: 12px 14px; margin-top: 12px; border-radius: 16px; background: rgba(255, 211, 110, 0.07); border: 1px solid rgba(255, 211, 110, 0.25); font-size: 14px; }
+.fee-box div { display: flex; justify-content: space-between; gap: 12px; }
+.fee-box span { color: var(--muted); }
+.fee-box .fee-win { padding-top: 6px; border-top: 1px solid var(--line); }
+.fee-box .fee-win span, .fee-box .fee-win b { color: var(--gold); font-weight: 700; }
+.fee-line { color: var(--muted); font-size: 13px; margin: -6px 0 8px; text-align: center; }
+.lobby-tip { max-width: 360px; text-align: center; color: var(--muted); font-size: 13.5px; line-height: 1.5; min-height: 40px; animation: enter 0.5s; }

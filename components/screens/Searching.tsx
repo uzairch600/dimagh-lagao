@@ -1,44 +1,53 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, Users } from "lucide-react";
+import { Bot, Lock } from "lucide-react";
 import { rs } from "@/lib/api";
 import type { Category } from "@/lib/types";
 import Avatar from "../Avatar";
 
 type Props = {
-  info: { category: Category; entry: number; prize: number; since: number };
+  info: { category: Category; entry: number; prize: number; since: number; practice?: boolean };
   name: string;
   avatar: string;
-  houseMaxEntry: number;
   houseWaitSeconds: number;
-  onCancel: () => void;
   onPlayComputer: () => void;
 };
 
-export default function Searching({ info, name, avatar, houseMaxEntry, houseWaitSeconds, onCancel, onPlayComputer }: Props) {
+// Short, calm tips that rotate while the player waits in the lobby.
+const TIPS = [
+  "Jitna tez sahi jawab, utne zyada points — 2 second ke andar poore 100.",
+  "Ghalat jawab par 0 points, is liye andaza lagane se pehle soch lein.",
+  "Har sawal ke liye 10 second hain.",
+  "Match ke dauran tab ya app band na karein — warna match haar jayenge.",
+  "Dono players ko bilkul same sawal milte hain.",
+];
+
+// The lobby. The entry is already paid and there is no way back from here.
+export default function Searching({ info, name, avatar, houseWaitSeconds, onPlayComputer }: Props) {
   const [secs, setSecs] = useState(0);
   const started = useRef(false);
-  const computerAllowed = info.entry <= houseMaxEntry;
+  const practice = !!info.practice;
   const left = Math.max(0, houseWaitSeconds - secs);
+  const tip = TIPS[Math.floor(secs / 6) % TIPS.length];
 
   useEffect(() => {
     const t = setInterval(() => setSecs(Math.floor((Date.now() - info.since) / 1000)), 250);
     return () => clearInterval(t);
   }, [info.since]);
 
-  // After the wait, the app plays the user itself (only for entries it covers).
+  // After the wait, the app plays the user itself, at any entry.
   useEffect(() => {
-    if (computerAllowed && left === 0 && !started.current) {
+    if (!practice && left === 0 && !started.current) {
       started.current = true;
       onPlayComputer();
     }
-  }, [computerAllowed, left, onPlayComputer]);
+  }, [practice, left, onPlayComputer]);
 
   return (
     <section className="screen center-col searching">
       <p className="eyebrow">
-        {info.category.name} • Entry {rs(info.entry)}
+        {info.category.name} • {practice ? "Free practice" : `Entry ${rs(info.entry)}`}
       </p>
       <div className="radar">
         <span className="ring" />
@@ -47,11 +56,13 @@ export default function Searching({ info, name, avatar, houseMaxEntry, houseWait
         <Avatar name={name} avatar={avatar} size="xl" />
       </div>
       <h2>Muqabil dhoond rahe hain…</h2>
-      <p className="muted">
-        Jeetne wale ko <b className="gold">{rs(info.prize)}</b>
-      </p>
+      {!practice && (
+        <p className="muted">
+          Jeetne wale ko <b className="gold">{rs(info.prize)}</b>
+        </p>
+      )}
 
-      {computerAllowed ? (
+      {!practice && (
         <div className="wait-card card glass">
           <div className="wait-count">
             <svg viewBox="0 0 44 44">
@@ -61,7 +72,7 @@ export default function Searching({ info, name, avatar, houseMaxEntry, houseWait
             <b>{left}</b>
           </div>
           <div>
-            <b>{left > 0 ? `${left} second mein player na mila…` : "Computer se match shuru ho raha hai…"}</b>
+            <b>{left > 0 ? `${left} second mein player na mila…` : "Computer muqabil mil gaya"}</b>
             <p>
               …to <b>app khud aap ke saath match khelegi</b> aur aap ke muqable mein {rs(info.entry)} lagayegi. Muqabil
               &quot;Computer&quot; likha hoga.
@@ -69,20 +80,15 @@ export default function Searching({ info, name, avatar, houseMaxEntry, houseWait
           </div>
           <Bot className="wait-bot" size={22} />
         </div>
-      ) : (
-        <div className="wait-card card glass">
-          <Users size={26} className="wait-users" />
-          <div>
-            <b>Sirf asli players</b>
-            <p>{rs(info.entry)} ki entry par computer nahi khelta. Thora intezar karein ya chhoti entry chunein.</p>
-          </div>
-        </div>
       )}
 
-      <button className="btn btn-ghost" onClick={onCancel}>
-        Cancel
-      </button>
-      <p className="fine">Entry fee sirf tab kategi jab match shuru ho.</p>
+      <p className="lobby-tip" key={tip}>{tip}</p>
+
+      {!practice && (
+        <p className="fine lobby-lock">
+          <Lock size={14} /> Entry {rs(info.entry)} kat chuki hai. Lobby chhorne par entry wapas nahi milegi.
+        </p>
+      )}
     </section>
   );
 }

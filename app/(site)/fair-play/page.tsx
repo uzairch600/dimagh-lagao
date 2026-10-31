@@ -30,19 +30,23 @@ export default function FairPlay() {
               <li>Jawab ka waqt server naapta hai, is liye timer se chhed-chhaar ka faida nahi.</li>
               <li>Sawal AI aur team milkar banate hain, aur har sawal ek alag fact-check se guzarta hai. Ghalti mile to humein batayein.</li>
               <li>Ek se zyada account, bots ya mil kar khelna pakda jata hai aur account band ho sakta hai.</li>
+              <li>Match ke dauran tab ya window badalna, full screen se nikalna, devtools kholna ya browser extension chalana cheating hai. Cheating pakdi gayi to wo player foran haar jata hai aur muqabil jeet jata hai. Dono ne ki to dono haarte hain aur dono entries platform rakhta hai.</li>
+              <li>Sahi jawab aap ke jawab dene ke baad hi server se aata hai, aur har player ko options alag tarteeb mein milte hain.</li>
+              <li>Har sawal 10 second ka hai aur der se diye gaye sahi jawab ke points kam hote hain — kisi aur se poochh kar jawab dena faida nahi deta.</li>
+              <li>Paid match mein jeetne wale ka pattern ghair-mamooli ho (taqreeban sab sahi magar hamesha der se, ya har match mein ek jaisi timing) to inaam review ke baad milta hai. Saaf jeet ka inaam foran milta hai.</li>
             </ul>
 
             <h2>Computer opponent</h2>
             <p>
-              Agar 30 second mein koi asli player na mile, to Rs 100 tak ki entry par app khud &quot;Computer&quot; ban kar aap ke
+              Agar 30 second mein koi asli player na mile, to har entry par app khud &quot;Computer&quot; ban kar aap ke
               saath khelti hai. Us match mein app aap ke muqable mein utni hi entry lagati hai, aur aap jeetein to inaam app deti
               hai.
             </p>
             <ul>
               <li>Computer hamesha &quot;Computer&quot; naam aur robot icon ke saath dikhta hai.</li>
-              <li>Us ki taqat sab ke liye ek jaisi aur fix hai: taqreeban <b>65% sawal sahi</b>, jawab <b>4 se 14 second</b> mein.</li>
+              <li>Us ki taqat sab ke liye ek jaisi aur fix hai: taqreeban <b>65% sawal sahi</b>, jawab <b>2.5 se 8.5 second</b> mein.</li>
               <li>Computer ke paas sahi jawab pehle se nahi hota jo aap ke khilaf istemal ho — wo bas apni fix accuracy par khelta hai.</li>
-              <li>Agar aap match ke beech chale jayein, to match poora khela jata hai — jaldi nikal kar faida nahi uthaya ja sakta.</li>
+              <li>Match ke beech chale gaye aur 10 second mein wapas na aaye, to aap haar jate hain aur entry wapas nahi milti.</li>
             </ul>
 
             <h2>Zimmedari se khelein</h2>

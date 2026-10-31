@@ -8,7 +8,7 @@ export const SITE = {
   whatsapp: "", // e.g. "+92 300 0000000" — leave empty to hide
   city: "Pakistan",
   minAge: 18,
-  platformFeePercent: 10,
+  platformFeePercent: 30,
   updated: "31 October 2026",
 };
 
