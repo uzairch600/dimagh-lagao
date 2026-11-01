@@ -63,6 +63,19 @@ export default function GameApp() {
     return data;
   }, []);
 
+  // The server no longer has this player's lobby place or match (it restarted or crashed mid-game): leave the dead
+  // screen instead of sitting on a board the server will never judge.
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
+  const leaveLostMatch = useCallback(() => {
+    if (!["searching", "versus", "match"].includes(screenRef.current)) return;
+    setMatch(null);
+    setSearching(null);
+    setScreen("home");
+    notify("Connection toot gaya aur ye match khatam ho gaya. Paid entry thi to Wallet mein dekh lein.", "error");
+    refreshMe().catch(() => {});
+  }, [notify, refreshMe]);
+
   const logout = useCallback(() => {
     socketRef.current?.disconnect();
     socketRef.current = null;
@@ -105,6 +118,8 @@ export default function GameApp() {
       setMatch((m) => (m ? { ...m, question: q, reveal: null, myChoice: null, oppAnswered: false } : m));
       setScreen("match");
     });
+
+    s.on("session:idle", leaveLostMatch);
 
     s.on("match:opponentAnswered", () => setMatch((m) => (m ? { ...m, oppAnswered: true } : m)));
 
@@ -149,7 +164,7 @@ export default function GameApp() {
       setScreen("home");
       notify(reason, "error");
     });
-  }, [logout, notify, refreshMe]);
+  }, [logout, notify, refreshMe, leaveLostMatch]);
 
   // ---------- boot ----------
   useEffect(() => {
@@ -226,7 +241,8 @@ export default function GameApp() {
     new Promise<boolean>((resolve) => {
       if (!match?.question) return resolve(false);
       const { matchId } = match.found;
-      socketRef.current?.emit("match:solve", { matchId, index: match.question.index, solution }, (res: { ok: boolean }) => {
+      socketRef.current?.emit("match:solve", { matchId, index: match.question.index, solution }, (res: { ok: boolean; gone?: boolean }) => {
+        if (res?.gone) leaveLostMatch();
         if (res?.ok) {
           sfx.correct();
           setMatch((m) => (m ? { ...m, myChoice: 0 } : m));

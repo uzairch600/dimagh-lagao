@@ -302,7 +302,8 @@ export function answer(userId, { matchId, index, choice }) {
 const MAX_TRIES = 40;
 export function solve(userId, { matchId, index, solution }) {
   const m = matches.get(matchId);
-  if (!m || m.done || m.phase !== "question" || index !== m.index) return { ok: false };
+  if (!m) return { ok: false, gone: true }; // the match no longer exists on this server
+  if (m.done || m.phase !== "question" || index !== m.index) return { ok: false };
   const q = m.questions[index];
   const p = m.players.find((x) => x.userId === userId);
   if (!q?.puzzle || !p || p.answers[index]) return { ok: false };
@@ -490,6 +491,21 @@ export function handleDisconnect(userId) {
 }
 
 // A player who refreshed or reconnected within the grace period continues where they were.
+// The server is about to stop (Render sends SIGTERM on every deploy and before a free instance sleeps). Matches live
+// only in memory, so end every unfinished one now and give paid entries back instead of losing them.
+export function shutdown(reason) {
+  for (const [key, q] of queues) {
+    for (const w of q) {
+      activeByUser.delete(w.userId);
+      db.addTransaction(w.userId, "refund", w.entry, "Server update — entry wapas");
+      w.socket.emit("queue:cancelled", { reason, balance: db.getUser(w.userId).balance });
+    }
+    queues.delete(key);
+  }
+  for (const m of [...matches.values()]) if (!m.done) cancelMatch(m, reason);
+}
+
+// false: this player has no lobby place or match on this server (e.g. it restarted), so the client stops waiting on one
 export function rejoin(userId, socket) {
   const waiting = [...queues.values()].flat().find((w) => w.userId === userId);
   if (waiting) {

@@ -4,6 +4,8 @@ import http from "node:http";
 import next from "next";
 import express from "express";
 import { api, attachRealtime, startBackground } from "./server/api.js";
+import * as game from "./server/game.js";
+import * as store from "./server/store.js";
 
 const port = Number(process.env.PORT || 3000);
 const dev = !process.argv.includes("--prod");
@@ -25,6 +27,20 @@ const nextUpgrade = nextApp.getUpgradeHandler();
 server.on("upgrade", (req, socket, head) => {
   if (!req.url?.startsWith("/socket.io")) nextUpgrade(req, socket, head);
 });
+
+// Render sends SIGTERM before every deploy and before a free instance sleeps. Live matches exist only in memory, so
+// end them (paid entries refunded), save what is pending, then exit.
+let stopping = false;
+async function stop(signal) {
+  if (stopping) return;
+  stopping = true;
+  console.log(`[server] ${signal}: ending live matches and saving before exit`);
+  game.shutdown("Server update ho raha hai — match band kar diya. Paid entry thi to wallet mein wapas aa gayi.");
+  await store.flush();
+  setTimeout(() => process.exit(0), 500); // let the last socket messages go out
+}
+process.on("SIGTERM", () => stop("SIGTERM"));
+process.on("SIGINT", () => stop("SIGINT"));
 
 server.listen(port, () => {
   console.log(`\n  Dimagh Lagao: http://localhost:${port}  (${dev ? "development" : "production"})`);

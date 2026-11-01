@@ -211,7 +211,8 @@ export function attachRealtime(httpServer) {
 
   io.on("connection", (socket) => {
     const userId = socket.data.userId;
-    game.rejoin(userId, socket);
+    // nothing to resume (e.g. the server restarted mid-match): tell the client so it doesn't sit on a dead board
+    if (!game.rejoin(userId, socket)) socket.emit("session:idle");
 
     socket.on("queue:join", (payload, cb) => {
       const result = game.joinQueue(socket, db.getUser(userId), { category: payload?.category, entry: Number(payload?.entry) });
