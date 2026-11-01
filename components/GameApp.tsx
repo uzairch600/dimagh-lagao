@@ -66,9 +66,11 @@ export default function GameApp() {
   // The server no longer has this player's lobby place or match (it restarted or crashed mid-game): leave the dead
   // screen instead of sitting on a board the server will never judge.
   const screenRef = useRef(screen);
+  const deadTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   screenRef.current = screen;
   const leaveLostMatch = useCallback(() => {
     if (!["searching", "versus", "match"].includes(screenRef.current)) return;
+    clearTimeout(deadTimer.current);
     setMatch(null);
     setSearching(null);
     setScreen("home");
@@ -108,6 +110,7 @@ export default function GameApp() {
     });
 
     s.on("match:cancelled", ({ reason, balance }: { reason: string; balance: number }) => {
+      clearTimeout(deadTimer.current);
       setMatch(null);
       setUser((u) => (u ? { ...u, balance } : u));
       setScreen("play");
@@ -115,6 +118,9 @@ export default function GameApp() {
     });
 
     s.on("match:question", (q: Question) => {
+      // the server ends every question itself; if nothing comes 8s after the time is up, the match is gone
+      clearTimeout(deadTimer.current);
+      deadTimer.current = setTimeout(leaveLostMatch, (q.seconds + 8) * 1000);
       setMatch((m) => (m ? { ...m, question: q, reveal: null, myChoice: null, oppAnswered: false } : m));
       setScreen("match");
     });
@@ -124,6 +130,7 @@ export default function GameApp() {
     s.on("match:opponentAnswered", () => setMatch((m) => (m ? { ...m, oppAnswered: true } : m)));
 
     s.on("match:reveal", (r: Reveal) => {
+      clearTimeout(deadTimer.current);
       const ok = r.you.points > 0;
       if (ok) sfx.correct();
       else sfx.wrong();
@@ -136,6 +143,7 @@ export default function GameApp() {
     });
 
     s.on("match:end", (e: MatchEnd) => {
+      clearTimeout(deadTimer.current);
       if (e.outcome === "win") sfx.win();
       else if (e.outcome === "loss") sfx.lose();
       setEnd(e);
@@ -234,7 +242,11 @@ export default function GameApp() {
   // puzzle rounds: the server checks the board and says whether it is solved
   // Quit button in a match (after the player confirmed): the server ends the match as a loss and sends match:end
   const quit = () => {
-    if (match) socketRef.current?.emit("match:quit", { matchId: match.found.matchId });
+    if (!match) return;
+    // match:end follows from the server; if the server no longer has this match, leave anyway
+    socketRef.current?.emit("match:quit", { matchId: match.found.matchId }, (res: { ok: boolean }) => {
+      if (!res?.ok) leaveLostMatch();
+    });
   };
 
   const solve = (solution: number[]) =>
