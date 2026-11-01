@@ -217,6 +217,11 @@ export default function GameApp() {
   };
 
   // puzzle rounds: the server checks the board and says whether it is solved
+  // Quit button in a match (after the player confirmed): the server ends the match as a loss and sends match:end
+  const quit = () => {
+    if (match) socketRef.current?.emit("match:quit", { matchId: match.found.matchId });
+  };
+
   const solve = (solution: number[]) =>
     new Promise<boolean>((resolve) => {
       if (!match?.question) return resolve(false);
@@ -313,7 +318,7 @@ export default function GameApp() {
               />
             )}
             {screen === "versus" && match && <Versus found={match.found} />}
-            {screen === "match" && match && <Match state={match} onAnswer={answer} onSolve={solve} />}
+            {screen === "match" && match && <Match state={match} onAnswer={answer} onSolve={solve} onQuit={quit} />}
             {screen === "result" && end && <Result end={end} user={user} found={match?.found ?? null} onAgain={playAgain} onHome={() => go("home")} />}
             {screen === "wallet" && <Wallet user={user} config={config} setSheet={setSheet} notify={notify} refreshMe={refreshMe} />}
             {screen === "leaderboard" && <Leaderboard me={user} />}

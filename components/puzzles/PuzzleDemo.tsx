@@ -42,7 +42,7 @@ export default function PuzzleDemo({ kind, name, compact, onPlay }: Props) {
           </ol>
           <p className="guide-label">Khelna</p>
           <p className="pzd-how">{def.how}</p>
-          <p className="pzd-how">Board sahi hote hi khud check ho jata hai. Dono players ko bilkul same puzzle — jo pehle hal kare, us ke zyada points.</p>
+          <p className="pzd-how">Board sahi hote hi khud check ho jata hai. Match mein 1 puzzle, 100 second — waqt par hal kiya to inaam aap ka.</p>
         </div>
       </div>
     </div>

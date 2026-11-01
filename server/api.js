@@ -202,6 +202,7 @@ export function attachRealtime(httpServer) {
     socket.on("match:answer", (payload) => game.answer(userId, payload || {}));
     socket.on("match:strike", (payload) => game.strike(userId, payload || {}));
     socket.on("match:solve", (payload, cb) => cb?.(game.solve(userId, payload || {})));
+    socket.on("match:quit", (payload, cb) => cb?.(game.quit(userId, payload || {})));
     socket.on("disconnect", () => game.handleDisconnect(userId));
   });
 }

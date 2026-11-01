@@ -89,6 +89,7 @@ export type MatchFound = {
   total: number;
   seconds: number;
   resumed?: boolean;
+  solo?: boolean; // a puzzle played alone: there is no opponent to show
   you: PlayerInfo;
   opponent: PlayerInfo;
   balance: number;
@@ -121,6 +122,7 @@ export type MatchEnd = {
   you: { score: number; correct: number };
   opponent: { name: string; score: number; correct: number };
   total: number;
+  solo?: boolean;
   balance: number;
   forfeit?: { by: "you" | "opponent" | "both"; reason: string } | null;
   void?: boolean;

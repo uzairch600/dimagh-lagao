@@ -70,6 +70,12 @@ export function joinQueue(socket, user, { category, entry }) {
 
   // Joining the lobby is final: the entry is charged now and research for this category starts now.
   db.addTransaction(user.id, "entry", -entry, `Match entry (${categoryName(category)})`);
+
+  // Puzzles are played alone: no lobby, no opponent. The player's own Puzzle Challenge starts right away.
+  if (PUZZLE_KINDS.includes(category)) {
+    startMatch({ mode: "challenge", category, entry, a: { user, socket }, b: null });
+    return { ok: true, balance: db.getUser(user.id).balance };
+  }
   prefetch(category, QUESTIONS_PER_MATCH);
 
   const key = `${category}:${entry}`;
@@ -143,16 +149,18 @@ const BOT_SKILL = {
 };
 const isPaid = (mode) => mode === "paid" || mode === "challenge";
 
-// Every puzzle match is ONE puzzle with PUZZLE_SECONDS: a 1v1 race, or the solo Puzzle Challenge (nobody to play
-// in 30s: solved = the prize, paid by the platform; not solved = the entry stays with the platform).
+// Every puzzle match is ONE puzzle with PUZZLE_SECONDS, played alone: the Puzzle Challenge (solved = the prize, paid
+// by the platform; not solved = the entry stays with the platform). Quiz players with nobody to play in 30s get one too.
 // Level 1 of every kind is the tough board built for 100 seconds (server/puzzles.js).
 const PUZZLE_SECONDS = 100;
 async function puzzleMatchRound(kind) {
   const q = await puzzleRound(kind, 1);
   return { ...q, seconds: PUZZLE_SECONDS };
 }
-// The challenge takes any kind except the maze (too easy for 100s with the prize on it).
-function challengeRound() {
+// A puzzle category plays its own puzzle. A quiz player's fallback challenge gets a random kind, never the maze
+// (the quickest to solve, with the prize on it).
+function challengeRound(category) {
+  if (PUZZLE_KINDS.includes(category)) return puzzleMatchRound(category);
   const kinds = PUZZLE_KINDS.filter((k) => k !== "maze");
   return puzzleMatchRound(kinds[crypto.randomInt(kinds.length)]);
 }
@@ -163,14 +171,15 @@ function startMatch({ mode, category, entry, a, b, since = Date.now() }) {
   const players = [a, b].filter(Boolean).map(({ user, socket }) => ({
     userId: user.id, name: user.name, avatar: user.avatar, socket, bot: false, score: 0, correct: 0, answers: [], strikes: 0,
   }));
-  if (mode === "practice") {
+  // Puzzles are solo (challenge, or free practice of a puzzle): the "opponent" is a ghost that never plays and only
+  // wins when the puzzle isn't solved in time. Quiz practice gets the computer.
+  const solo = mode === "challenge" || PUZZLE_KINDS.includes(category);
+  if (solo) {
+    players.push({ userId: "challenge", name: "Puzzle Challenge", avatar: "bot", socket: null, bot: true, ghost: true, score: 0, correct: 0, answers: [] });
+  } else if (mode === "practice") {
     players.push({ userId: "bot", name: "Computer", avatar: "bot", socket: null, bot: true, score: 0, correct: 0, answers: [] });
   }
-  // the challenge's "opponent" never plays; it only wins when the puzzle isn't solved in time
-  if (mode === "challenge") {
-    players.push({ userId: "challenge", name: "Puzzle Challenge", avatar: "bot", socket: null, bot: true, ghost: true, score: 0, correct: 0, answers: [] });
-    db.addHouse(entry); // the entry was charged when the player joined the lobby
-  }
+  if (mode === "challenge") db.addHouse(entry); // the entry was charged when the player joined
 
   // Players stay on the matchmaking screen until this match's questions are ready.
   const m = { id, mode, category, entry, prize: isPaid(mode) ? prizeFor(entry) : 0, players, questions: [], index: -1, phase: "preparing", askedAt: 0, timer: null, done: false };
@@ -185,7 +194,7 @@ function startMatch({ mode, category, entry, a, b, since = Date.now() }) {
   const puzzleMatch = mode === "challenge" || PUZZLE_KINDS.includes(category);
   const want = puzzleMatch ? 1 : QUESTIONS_PER_MATCH;
   (puzzleMatch
-    ? (mode === "challenge" ? challengeRound() : puzzleMatchRound(category)).then((q) => [q])
+    ? (mode === "challenge" ? challengeRound(category) : puzzleMatchRound(category)).then((q) => [q])
     : questionsForMatch(category, want, since + LOBBY_MAX_MS))
     .catch((err) => {
       console.error("[game] could not prepare questions:", err);
@@ -205,7 +214,7 @@ function sendFound(m, p, resumed = false) {
   const opp = m.players.find((x) => x !== p);
   p.socket?.emit("match:found", {
     matchId: m.id, mode: m.mode, category: categoryName(m.category), entry: m.entry, prize: m.prize,
-    total: m.questions.length || QUESTIONS_PER_MATCH, seconds: SECONDS_PER_QUESTION, resumed,
+    total: m.questions.length || QUESTIONS_PER_MATCH, seconds: SECONDS_PER_QUESTION, resumed, solo: !!opp.ghost,
     you: { name: p.name, avatar: p.avatar, score: p.score },
     opponent: { name: opp.name, avatar: opp.avatar, bot: opp.bot, score: opp.score },
     balance: db.getUser(p.userId).balance,
@@ -367,8 +376,10 @@ function finish(m, opts = {}) {
   clearTimeout(m.timer);
   clearTimeout(m.cheatTimer);
   const [a, b] = m.players;
-  // challenge: solved (any points) beats the ghost; otherwise the ghost "wins" and the platform keeps the entry
-  const byScore = m.mode === "challenge" ? (a.score > 0 ? a : b) : a.score === b.score ? null : a.score > b.score ? a : b;
+  // solo puzzle: solved (any points) beats the ghost; otherwise the ghost "wins" (in a challenge the platform keeps
+  // the entry)
+  const solo = m.players.some((p) => p.ghost);
+  const byScore = solo ? (a.score > 0 ? a : b) : a.score === b.score ? null : a.score > b.score ? a : b;
   const winner = opts.void || opts.nobodyWins ? null : opts.winner ?? byScore;
   const patterns = new Map(humans(m).map((p) => [p, checkPatterns(m, p)]));
   const holdReasons = winner && !winner.bot && isPaid(m.mode) ? (patterns.get(winner) || []).filter((r) => r.hold).map((r) => r.reason) : [];
@@ -419,12 +430,24 @@ function finish(m, opts = {}) {
       you: { score: p.score, correct: p.correct },
       opponent: { name: opp.name, score: opp.score, correct: opp.correct },
       total: m.questions.length,
+      solo: !!opp.ghost,
       balance: db.getUser(p.userId).balance,
       forfeit: opts.forfeit ? { by: opts.forfeit.userId === "both" ? "both" : opts.forfeit.userId === p.userId ? "you" : "opponent", reason: opts.forfeit.reason } : null,
       void: !!opts.void,
     });
   }
   matches.delete(m.id);
+}
+
+// The player pressed Quit in a match and confirmed: they lose at once. The entry is gone; in a 1v1 the opponent wins
+// the prize, in a solo puzzle the platform keeps the entry, in practice nothing changes hands.
+export function quit(userId, { matchId }) {
+  const m = matches.get(matchId);
+  const p = m?.players.find((x) => x.userId === userId);
+  if (!m || m.done || !p) return { ok: false };
+  clearTimeout(p.graceTimer);
+  forfeit(m, p, "quit");
+  return { ok: true };
 }
 
 function forfeit(m, loser, reason) {

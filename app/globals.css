@@ -1082,19 +1082,11 @@ img.site-logo-mark { padding: 0; object-fit: cover; }
 .pz-art .slide .pz-cell { font-size: 14px; border-radius: 6px; }
 .pz-art .pz-grid.slide, .pz-art .pz-grid.lights { gap: 3px; padding: 3px; }
 
-/* ==================== Khelein: puzzle cards, filters, banner ==================== */
+/* ==================== Khelein: puzzle cards, banner ==================== */
 .pz-banner-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .pz-banner-chips .pz-banner-chip { margin-top: 0; }
 .pz-banner-art .pz-art { display: block; }
 .pz-banner-art .pz-art + .pz-art .pz-grid { transform: rotate(5deg) translateY(10px); }
-.pz-filters { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 14px; padding-bottom: 2px; scrollbar-width: none; }
-.pz-filters::-webkit-scrollbar { display: none; }
-.pz-filters button {
-  flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: var(--card);
-  border: 1px solid var(--line); font-weight: 700; font-size: 13px; color: var(--muted); transition: background 0.2s, color 0.2s, border-color 0.2s;
-}
-.pz-filters button.on { color: #fff; background: rgba(124, 92, 255, 0.25); border-color: rgba(124, 92, 255, 0.6); }
-.pz-filters small { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: rgba(255, 255, 255, 0.1); }
 .cat-grid2.pz-cards { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 @media (min-width: 720px) { .cat-grid2.pz-cards { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } }
 @media (min-width: 1024px) { .cat-grid2.pz-cards { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; } }
@@ -1173,3 +1165,18 @@ img.site-logo-mark { padding: 0; object-fit: cover; }
 .pzd-rule-list { margin: 0 0 10px 18px; display: grid; gap: 5px; }
 .pzd-how { color: var(--muted); margin-bottom: 6px; }
 .puzzle-guide .pzd-rules { background: transparent; border: 0; padding: 4px 0 0; }
+.versus.solo { justify-content: center; }
+
+/* ==================== Quit a match ==================== */
+.match-top { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+.quit-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+  color: var(--muted); background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line); transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+.quit-btn:hover { color: var(--red); background: rgba(255, 77, 109, 0.1); border-color: rgba(255, 77, 109, 0.4); }
+.quit-box { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 6px 0 2px; }
+.quit-box > svg { color: var(--red); }
+.quit-box p { color: var(--text); font-size: 15px; line-height: 1.5; max-width: 380px; }
+.quit-box small { color: var(--muted); margin-bottom: 6px; }
+.quit-yes { color: var(--red); border-color: rgba(255, 77, 109, 0.45); }
+.quit-yes:hover { background: rgba(255, 77, 109, 0.15); }

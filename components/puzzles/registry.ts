@@ -15,13 +15,6 @@ export const PUZZLES: Record<PuzzleKind, AnyDef> = {
   nonogram, hitori, tents, akari, slide, flood, target, words, pipes, balls,
 };
 
-// Filters on the Khelein screen.
-export const FAMILIES: { id: string; name: string; kinds: PuzzleKind[] }[] = [
-  { id: "quick", name: "Jaldi wale", kinds: ["maze", "words", "balls", "slide", "flood", "pipes", "target", "lights"] },
-  { id: "lines", name: "Raaste", kinds: ["path", "maze", "oneline", "link", "pipes"] },
-  { id: "logic", name: "Dimaghi", kinds: ["crowns", "sunmoon", "sudoku", "futoshiki", "skyscraper", "nonogram", "hitori", "tents", "akari"] },
-];
-
 // Tiny generated boards with solutions (scripts/make-puzzle-samples.js): [0] for the walkthrough and card art,
 // the rest for practice.
 export type Sample<K extends PuzzleKind = PuzzleKind> = { puzzle: Of<K>; solution: number[] };

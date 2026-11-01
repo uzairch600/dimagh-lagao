@@ -105,18 +105,6 @@ for (const [cat, items] of Object.entries(SEED)) {
     if (!have.has(norm(q))) pool[cat].push({ id: hashId(cat, q), q, correct, wrong, difficulty: "easy", source: "seed" });
   }
 }
-if (store.enabled) {
-  const remote = await store.loadQuestions();
-  if (Object.keys(remote).length === 0) {
-    for (const [cat, items] of Object.entries(pool)) await store.saveQuestions(cat, items);
-    console.log("[questions] copied local question pool into Supabase");
-  } else {
-    for (const [cat, items] of Object.entries(remote)) {
-      const have = new Set((pool[cat] ||= []).map((x) => x.id));
-      for (const q of items) if (!have.has(q.id)) pool[cat].push(q);
-    }
-  }
-}
 // Global no-repeat: a question text exists once across all categories, and once shown it is retired forever.
 const allNorms = new Set();
 for (const items of Object.values(pool)) for (const q of items) allNorms.add(norm(q.q));
@@ -124,9 +112,38 @@ for (const items of Object.values(pool)) for (const q of items) allNorms.add(nor
   const seen = allSeenIds();
   const newlyUsed = [];
   for (const items of Object.values(pool)) for (const q of items) if (!q.used && seen.has(q.id)) { q.used = true; newlyUsed.push(q.id); }
-  if (store.enabled && newlyUsed.length) await store.markQuestionsUsed(newlyUsed);
+  if (store.enabled && newlyUsed.length) store.markQuestionsUsed(newlyUsed).catch((err) => console.error("[questions] marking used failed:", err.message));
 }
 savePool();
+
+// Supabase holds the same pool. Startup must not wait for it (2,700 rows took ~55s on a slow link), so the server
+// starts with the local copy and merges what only Supabase has (new questions, used flags) in the background.
+async function syncPoolWithStore() {
+  const started = Date.now();
+  const remote = await store.loadQuestions();
+  if (Object.keys(remote).length === 0) {
+    for (const [cat, items] of Object.entries(pool)) await store.saveQuestions(cat, items);
+    console.log("[questions] copied local question pool into Supabase");
+    return;
+  }
+  let added = 0;
+  for (const [cat, items] of Object.entries(remote)) {
+    const mine = new Map((pool[cat] ||= []).map((x) => [x.id, x]));
+    for (const q of items) {
+      const have = mine.get(q.id);
+      if (have) {
+        if (q.used) have.used = true;
+        continue;
+      }
+      pool[cat].push(q);
+      allNorms.add(norm(q.q));
+      added++;
+    }
+  }
+  savePool();
+  console.log(`[questions] pool synced with Supabase in ${((Date.now() - started) / 1000).toFixed(1)}s (${added} new from the database)`);
+}
+if (store.enabled) syncPoolWithStore().catch((err) => console.error("[questions] Supabase sync failed:", err.message));
 
 function markUsed(items) {
   for (const q of items) q.used = true;

@@ -1,0 +1,24 @@
+# Render Blueprint: Render > New > Blueprint > pick this repo. Creates the live web service.
+# Secrets (DATABASE_URL, ANTHROPIC_API_KEY) are not in this file: Render asks for them when the Blueprint is applied.
+services:
+  - type: web
+    name: dimagh-lagao
+    runtime: node
+    # starter stays awake. The free plan sleeps after 15 idle minutes, which drops live matches and makes the
+    # next visitor wait about a minute.
+    plan: starter
+    region: singapore # closest Render region to Pakistan
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/config
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DEMO_MODE # live: real game, no fake money
+        value: "false"
+      - key: AI_DAILY_COST_CAP_USD
+        value: "1"
+      - key: DATABASE_URL
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false

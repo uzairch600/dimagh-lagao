@@ -68,8 +68,9 @@ export default function HowToPlay() {
             <h2>Puzzles</h2>
             <p>
               Khelein mein Quiz ke saath 20 puzzles bhi hain — <b>Taaj</b>, <b>Sudoku</b>, <b>Lafz Dhoondo</b>, <b>Gend Tarteeb</b>,{" "}
-              <b>Hisaab Jor</b>, <b>Pipe Jor</b> aur bohat se aur. Dono players ko bilkul same puzzle milta hai: 1 puzzle, 100
-              second. Board poora sahi hote hi server check karta hai — jo pehle hal kare wohi jeete. Har puzzle card par
+              <b>Hisaab Jor</b>, <b>Pipe Jor</b> aur bohat se aur. Puzzle akele khela jata hai — koi muqabil nahi: 1 puzzle, 100
+              second. Board poora sahi hote hi server check karta hai — waqt par hal kiya to inaam aap ka, warna entry gayi.
+              Free practice bhi hai. Har puzzle card par
               &quot;Kaise khelein&quot; dabayein: ek haath puzzle hal kar ke dikhata hai, phir aap chhote puzzle par khud practice kar
               sakte hain.
             </p>

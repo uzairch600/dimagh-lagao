@@ -30,8 +30,10 @@ export default function Searching({ info, name, avatar, houseWaitSeconds, challe
   const [secs, setSecs] = useState(0);
   const started = useRef(false);
   const practice = !!info.practice;
+  // puzzles are played alone: the server starts the board right away, nobody is searched for
+  const puzzle = info.category.group === "puzzle";
   // above challengeMaxEntry there is no Puzzle Challenge: wait for a real opponent, refund after refundSeconds
-  const challenge = !practice && info.entry <= challengeMaxEntry;
+  const challenge = !practice && !puzzle && info.entry <= challengeMaxEntry;
   const left = Math.max(0, (challenge ? houseWaitSeconds : refundSeconds) - secs);
   const tip = TIPS[Math.floor(secs / 6) % TIPS.length];
 
@@ -47,6 +49,23 @@ export default function Searching({ info, name, avatar, houseWaitSeconds, challe
       onStartChallenge();
     }
   }, [challenge, left, onStartChallenge]);
+
+  if (puzzle)
+    return (
+      <section className="screen center-col searching">
+        <p className="eyebrow">
+          {info.category.name} • {practice ? "Free practice" : `Entry ${rs(info.entry)}`}
+        </p>
+        <div className="radar">
+          <span className="ring" />
+          <span className="ring" />
+          <span className="ring" />
+          <Avatar name={name} avatar={avatar} size="xl" />
+        </div>
+        <h2>Puzzle tayyar ho raha hai…</h2>
+        <p className="muted">1 puzzle, 100 second — koi muqabil nahi, sirf aap aur ghari.</p>
+      </section>
+    );
 
   return (
     <section className="screen center-col searching">

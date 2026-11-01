@@ -50,8 +50,9 @@ export default function Terms() {
           <p>
             Paid quiz matches are always between two real players. If no other player is found within 30 seconds, you get a
             Puzzle Challenge instead: one puzzle with 100 seconds to solve it. If you solve it in time, the Platform pays you the
-            prize for your entry; if not, the entry is not refunded. See the <Link href="/fair-play">Fair Play</Link> page.
-            Practice matches against the computer are free and carry no prize.
+            prize for your entry; if not, the entry is not refunded. Puzzle categories are always played this way, alone,
+            with no opponent. See the <Link href="/fair-play">Fair Play</Link> page. Practice matches are free and carry no
+            prize.
           </p>
 
           <h2>5. Withdrawals</h2>

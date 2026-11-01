@@ -16,6 +16,7 @@ function forfeitNote(end: MatchEnd): string | null {
   const f = end.forfeit;
   if (end.void) return "Match void ho gaya — entry wapas kar di gayi.";
   if (!f) return null;
+  if (f.reason === "quit") return f.by === "you" ? "Aap ne match chhor diya — is liye haar gaye." : "Muqabil ne match chhor diya — aap jeet gaye.";
   const cheat = f.reason === "cheating";
   if (f.by === "both") return cheat ? "Dono players ki cheating pakdi gayi — dono haar gaye, inaam kisi ko nahi." : "Dono players match chhor gaye — inaam kisi ko nahi.";
   if (f.by === "you") return cheat ? "Cheating pakdi gayi (tab/window badla ya extension) — is liye aap haar gaye." : "Aap waqt par wapas nahi aaye — match haar gaye.";
@@ -23,9 +24,18 @@ function forfeitNote(end: MatchEnd): string | null {
 }
 
 export default function Result({ end, user, found, onAgain, onHome }: Props) {
-  const challenge = end.mode === "challenge";
-  const c = challenge && end.outcome === "loss" && !end.forfeit ? { title: "Chhu mantar!", cls: "lose" } : challenge && end.outcome === "win" ? { title: "Challenge jeet liya!", cls: "win" } : COPY[end.outcome];
-  const note = challenge && !end.forfeit ? (end.outcome === "win" ? "Puzzle waqt par hal — inaam aap ka." : "Waqt khatam, puzzle hal nahi hua — entry gayi.") : forfeitNote(end);
+  // solo: a puzzle played alone (paid challenge or free practice), so there is no opponent to compare with
+  const solo = !!end.solo || end.mode === "challenge";
+  const practice = end.mode === "practice";
+  const won = end.outcome === "win";
+  const c = solo && !end.forfeit && end.outcome !== "draw"
+    ? won ? { title: practice ? "Puzzle hal!" : "Challenge jeet liya!", cls: "win" } : { title: "Chhu mantar!", cls: "lose" }
+    : COPY[end.outcome];
+  const note = solo && !end.forfeit
+    ? won
+      ? practice ? "Waqt par hal kar liya — ab inaam wala match khelein." : "Puzzle waqt par hal — inaam aap ka."
+      : practice ? "Waqt khatam — demo dekh kar dobara try karein." : "Waqt khatam, puzzle hal nahi hua — entry gayi."
+    : forfeitNote(end);
 
   const paid = end.mode !== "practice";
   let amount = "Practice match";
@@ -42,7 +52,7 @@ export default function Result({ end, user, found, onAgain, onHome }: Props) {
       <img className={`result-art ${c.cls}`} src={`/images/result-${c.cls}.webp`} alt="" width={480} height={480} />
       <h1>{c.title}</h1>
       <p className={`result-amount ${amountCls}`}>{amount}</p>
-      {paid && !challenge && end.outcome === "win" && (
+      {paid && !solo && end.outcome === "win" && (
         <p className="fee-line">
           Pot {rs(end.entry * 2)} − platform fee {Math.round((end.rake ?? 0.3) * 100)}% ({rs(end.entry * 2 - end.prize)}) = {rs(end.prize)}
         </p>
@@ -52,7 +62,7 @@ export default function Result({ end, user, found, onAgain, onHome }: Props) {
           Aap ke jawabon ka pattern ghair-mamooli tha, is liye inaam review ke baad wallet mein aayega. Sab theek hua to poora inaam milega.
         </p>
       )}
-      {note && <p className={`result-note ${end.forfeit?.by === "opponent" || (challenge && end.outcome === "win") ? "good" : "bad"}`}>{note}</p>}
+      {note && <p className={`result-note ${end.forfeit?.by === "opponent" || (solo && won) ? "good" : "bad"}`}>{note}</p>}
 
       <div className="r-board card glass">
         <div className={`r-row ${youTop ? "top" : ""}`}>
@@ -61,7 +71,7 @@ export default function Result({ end, user, found, onAgain, onHome }: Props) {
           <span className="r-correct">{end.you.correct}/{end.total} sahi</span>
           <span className="r-score">{end.you.score}</span>
         </div>
-        {!challenge && (
+        {!solo && (
           <div className={`r-row ${!youTop ? "top" : ""}`}>
             <Avatar name={end.opponent.name} avatar={found?.opponent.avatar} size="sm" />
             <b>{end.opponent.name}</b>

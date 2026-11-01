@@ -17,6 +17,28 @@ export default function Versus({ found }: { found: MatchFound }) {
     sfx.tick();
   }, [n]);
 
+  // a puzzle is played alone: no opponent, just the player against the clock
+  if (found.solo)
+    return (
+      <section className="screen">
+        <div className="versus solo">
+          <div className="vs-player">
+            <Avatar name={found.you.name} avatar={found.you.avatar} size="xl" />
+            <b>{found.you.name}</b>
+          </div>
+        </div>
+        <div className="vs-info">
+          <p className="eyebrow">{found.category} • Puzzle Challenge</p>
+          <div className="vs-prize">
+            {found.mode === "practice" ? "Practice — free, koi inaam nahi" : `100 second mein hal karein — inaam ${rs(found.prize)}`}
+          </div>
+          <div className="countdown" key={n}>
+            {n}
+          </div>
+        </div>
+      </section>
+    );
+
   return (
     <section className="screen">
       <div className="versus">

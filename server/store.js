@@ -12,22 +12,25 @@ let pool = null;
 
 export async function init() {
   pool = new pg.Pool({ connectionString: url, ssl: { rejectUnauthorized: false }, max: 5 });
-  await pool.query("create schema if not exists app");
-  for (const t of TABLES) {
-    await pool.query(`create table if not exists app.${t} (id text primary key, data jsonb not null, updated_at timestamptz not null default now())`);
-    await pool.query(`alter table app.${t} enable row level security`);
-  }
+  // All schema statements go in ONE round trip: on a slow link 20 separate queries took ~9s at startup.
   await pool.query(
-    "create table if not exists app.questions (id text primary key, category text not null, data jsonb not null, created_at timestamptz not null default now())",
+    [
+      "create schema if not exists app",
+      ...TABLES.flatMap((t) => [
+        `create table if not exists app.${t} (id text primary key, data jsonb not null, updated_at timestamptz not null default now())`,
+        `alter table app.${t} enable row level security`,
+      ]),
+      "create table if not exists app.questions (id text primary key, category text not null, data jsonb not null, created_at timestamptz not null default now())",
+      "alter table app.questions enable row level security",
+      "create index if not exists questions_category on app.questions (category)",
+      // A question may exist only once (by normalised text) across ALL categories, and is retired once used.
+      "alter table app.questions add column if not exists norm text",
+      "alter table app.questions add column if not exists used_at timestamptz",
+      "update app.questions set norm = trim(regexp_replace(lower(data->>'q'), '[^a-z0-9]+', ' ', 'g')) where norm is null",
+      "delete from app.questions a using app.questions b where a.norm = b.norm and a.ctid > b.ctid",
+      "create unique index if not exists questions_norm_unique on app.questions (norm)",
+    ].join(";\n"),
   );
-  await pool.query("alter table app.questions enable row level security");
-  await pool.query("create index if not exists questions_category on app.questions (category)");
-  // A question may exist only once (by normalised text) across ALL categories, and is retired once used.
-  await pool.query("alter table app.questions add column if not exists norm text");
-  await pool.query("alter table app.questions add column if not exists used_at timestamptz");
-  await pool.query("update app.questions set norm = trim(regexp_replace(lower(data->>'q'), '[^a-z0-9]+', ' ', 'g')) where norm is null");
-  await pool.query("delete from app.questions a using app.questions b where a.norm = b.norm and a.ctid > b.ctid");
-  await pool.query("create unique index if not exists questions_norm_unique on app.questions (norm)");
 }
 
 export async function loadAll(table) {

@@ -1,19 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, LogOut, TriangleAlert } from "lucide-react";
+import { rs } from "@/lib/api";
 import { sfx } from "@/lib/sound";
 import type { MatchState } from "../GameApp";
 import Avatar from "../Avatar";
+import Sheet from "../Sheet";
 import CanvasText from "../CanvasText";
 import PuzzleRound from "../puzzles/PuzzleRound";
 
 const KEYS = ["A", "B", "C", "D"];
 const isMath = (t: string) => /^[\d\s+−×÷=?]+$/.test(t);
 
-type Props = { state: MatchState; onAnswer: (i: number) => void; onSolve: (solution: number[]) => Promise<boolean> };
+type Props = { state: MatchState; onAnswer: (i: number) => void; onSolve: (solution: number[]) => Promise<boolean>; onQuit: () => void };
 
-export default function Match({ state, onAnswer, onSolve }: Props) {
+export default function Match({ state, onAnswer, onSolve, onQuit }: Props) {
   const { found, question: q, reveal, myChoice, oppAnswered, results, scores } = state;
   const [left, setLeft] = useState(q?.seconds ?? found.seconds);
   // matches the 1024px breakpoint in globals.css
@@ -34,12 +36,49 @@ export default function Match({ state, onAnswer, onSolve }: Props) {
     return () => clearInterval(t);
   }, [q]);
 
+  // Quit asks first and says exactly what the player loses (a native confirm() would blur the window and count as
+  // cheating, so it is an in-app sheet)
+  const [quitting, setQuitting] = useState(false);
+  const loses =
+    found.mode === "practice"
+      ? "Practice match khatam ho jayega. Koi paisa nahi katega."
+      : found.solo
+        ? `Aap ki ${rs(found.entry)} entry wapas nahi milegi aur ye match haar jayenge.`
+        : `Aap ki ${rs(found.entry)} entry wapas nahi milegi, aap haar jayenge aur ${rs(found.prize)} ka inaam muqabil ko mil jayega.`;
+
   const low = left <= 3 && !reveal;
   const myPoints = reveal?.you.points ?? 0;
 
 
   return (
     <section className="screen no-select">
+      <div className="match-top">
+        <button className="quit-btn" onClick={() => setQuitting(true)}>
+          <LogOut size={15} /> Chhor dein
+        </button>
+      </div>
+      <Sheet onClose={() => setQuitting(false)}>
+        {quitting && (
+          <div className="quit-box" role="alertdialog" aria-label="Match chhorna hai?">
+            <TriangleAlert size={40} />
+            <h3>Match chhorna hai?</h3>
+            <p>{loses}</p>
+            <small>Ghari chalti rahegi.</small>
+            <button className="btn btn-gold btn-block" onClick={() => setQuitting(false)}>
+              Nahi, khelte rahein
+            </button>
+            <button
+              className="btn btn-ghost btn-block quit-yes"
+              onClick={() => {
+                setQuitting(false);
+                onQuit();
+              }}
+            >
+              Haan, chhor dein
+            </button>
+          </div>
+        )}
+      </Sheet>
       <div className="scorebar">
         <div className="pscore you">
           <Avatar name={found.you.name} avatar={found.you.avatar} size="sm" />
@@ -62,15 +101,25 @@ export default function Match({ state, onAnswer, onSolve }: Props) {
           <span>{reveal ? <Check size={22} strokeWidth={3} /> : left}</span>
         </div>
 
-        <div className="pscore opp">
-          <div>
-            <small>{found.opponent.name}</small>
-            <b>{scores.opp}</b>
+        {found.solo ? (
+          // a puzzle played alone: the prize in place of an opponent
+          <div className="pscore opp">
+            <div>
+              <small>{found.mode === "practice" ? "Practice" : "Inaam"}</small>
+              <b>{found.mode === "practice" ? "Free" : rs(found.prize)}</b>
+            </div>
           </div>
-          <Avatar name={found.opponent.name} avatar={found.opponent.avatar} size="sm">
-            {oppAnswered && !reveal && <i className="answered-dot" />}
-          </Avatar>
-        </div>
+        ) : (
+          <div className="pscore opp">
+            <div>
+              <small>{found.opponent.name}</small>
+              <b>{scores.opp}</b>
+            </div>
+            <Avatar name={found.opponent.name} avatar={found.opponent.avatar} size="sm">
+              {oppAnswered && !reveal && <i className="answered-dot" />}
+            </Avatar>
+          </div>
+        )}
       </div>
 
       <div className="progress-dots">
@@ -86,12 +135,14 @@ export default function Match({ state, onAnswer, onSolve }: Props) {
       ) : q.puzzle ? (
         <>
           <p className="q-count pz-count">
-            Puzzle {q.index + 1}/{q.total}
+            {found.solo ? `Puzzle Challenge • ${q.seconds} second` : `Puzzle ${q.index + 1}/${q.total}`}
             {oppAnswered && !reveal && <span className="opp-done"> • Muqabil ne hal kar liya!</span>}
           </p>
           <PuzzleRound key={q.index} puzzle={q.puzzle} solved={myChoice !== null} solution={reveal?.solution} onSolve={onSolve} />
           <p className={`points-pop ${reveal ? "show" : ""}`} style={{ color: myPoints ? "var(--green)" : "var(--red)" }}>
-            {reveal ? (myPoints ? `+${myPoints} points` : "Is puzzle par 0 points") : myChoice !== null ? <span className="muted">Muqabil ka intezar…</span> : ""}
+            {found.solo
+              ? reveal ? (myPoints ? "Hal ho gaya!" : "Waqt khatam") : ""
+              : reveal ? (myPoints ? `+${myPoints} points` : "Is puzzle par 0 points") : myChoice !== null ? <span className="muted">Muqabil ka intezar…</span> : ""}
           </p>
         </>
       ) : (
