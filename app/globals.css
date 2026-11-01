@@ -1189,3 +1189,13 @@ img.site-logo-mark { padding: 0; object-fit: cover; }
 .soon-note svg { flex-shrink: 0; margin-top: 1px; }
 .screen > .soon-note { margin-top: 14px; }
 .tier:disabled { cursor: not-allowed; opacity: 0.55; }
+
+/* ==================== Login: use your own Easypaisa / JazzCash number ==================== */
+.number-warn {
+  display: flex; align-items: flex-start; gap: 10px; margin: 2px 0 14px; padding: 12px 14px; border-radius: 14px; text-align: left;
+  font-size: 13px; line-height: 1.5; color: #ffd9de; background: rgba(255, 77, 109, 0.12); border: 1px solid rgba(255, 77, 109, 0.45);
+}
+.number-warn svg { flex-shrink: 0; margin-top: 2px; color: var(--red); }
+.number-warn b { color: #fff; }
+.number-agree { align-items: flex-start; text-align: left; font-size: 13.5px; }
+.number-agree input { margin-top: 1px; }

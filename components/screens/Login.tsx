@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TriangleAlert } from "lucide-react";
 import { api } from "@/lib/api";
 import type { User } from "@/lib/types";
 
@@ -12,6 +13,7 @@ export default function Login({ onLoggedIn, notify }: Props) {
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
+  const [mine, setMine] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +53,17 @@ export default function Login({ onLoggedIn, notify }: Props) {
           />
         </label>
 
+        {/* prizes can only ever be sent to this number, so say so before the account exists */}
+        {step !== "login" && (
+          <p className="number-warn">
+            <TriangleAlert size={18} />
+            <span>
+              <b>Sirf apna wohi number likhein jis par aap ka Easypaisa ya JazzCash account bana hai.</b> Jeete hue paise sirf isi
+              number par bheje jayenge — kisi aur ka number diya to verification ke waqt aap ke paise us ke account mein chale jayenge.
+            </span>
+          </p>
+        )}
+
         {step === "signup" && (
           <label className="field">
             <span>Aap ka naam</span>
@@ -69,7 +82,14 @@ export default function Login({ onLoggedIn, notify }: Props) {
           </label>
         )}
 
-        <button className="btn btn-primary btn-block" disabled={busy}>
+        {step === "signup" && (
+          <label className="agree number-agree">
+            <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} required />
+            <span>Ye number mera hai aur is par mera Easypaisa / JazzCash account hai</span>
+          </label>
+        )}
+
+        <button className="btn btn-primary btn-block" disabled={busy || (step === "signup" && !mine)}>
           {busy ? "..." : step === "phone" ? "Aage barhein" : step === "signup" ? "Account banayein" : "Login"}
         </button>
 
