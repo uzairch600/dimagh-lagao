@@ -543,13 +543,22 @@ export function prefetch(category, count) {
 // Called when a match starts. Never returns a question that was used before, anywhere.
 // deadlineAt: if the AI isn't done by then, the match starts with stored questions; the AI run keeps going in the
 // background and its questions stay in the pool for later matches.
-export async function questionsForMatch(category, count, deadlineAt = Infinity) {
+// Free matches (no money) recycle the whole stored pool, used or not: no AI cost, and the never-shown questions stay
+// for paid matches.
+function recycled(category, count) {
+  const usable = (pool[category] || []).filter((x) => !(x.source === "ai-match" && !x.web));
+  return shuffle(usable).slice(0, count).map(toMatchQuestion);
+}
+
+// free: a match without money (free 1v1 or practice) — see recycled()
+export async function questionsForMatch(category, count, deadlineAt = Infinity, { free = false } = {}) {
   if (category === "math") return Array.from({ length: count }, (_, i) => mathQuestion(i));
   if (PUZZLE_KINDS.includes(category)) {
     const rounds = [];
     for (let i = 0; i < count; i++) rounds.push(await puzzleRound(category, i));
     return rounds;
   }
+  if (free) return recycled(category, count);
   const started = Date.now();
   const run = prepared.get(category) ?? produce(category, count);
   prepared.delete(category);

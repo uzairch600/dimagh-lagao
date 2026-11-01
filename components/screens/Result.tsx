@@ -26,7 +26,7 @@ function forfeitNote(end: MatchEnd): string | null {
 export default function Result({ end, user, found, onAgain, onHome }: Props) {
   // solo: a puzzle played alone (paid challenge or free practice), so there is no opponent to compare with
   const solo = !!end.solo || end.mode === "challenge";
-  const practice = end.mode === "practice";
+  const practice = end.mode === "practice" || end.mode === "free";
   const won = end.outcome === "win";
   const c = solo && !end.forfeit && end.outcome !== "draw"
     ? won ? { title: practice ? "Puzzle hal!" : "Challenge jeet liya!", cls: "win" } : { title: "Chhu mantar!", cls: "lose" }
@@ -37,8 +37,8 @@ export default function Result({ end, user, found, onAgain, onHome }: Props) {
       : practice ? "Waqt khatam — demo dekh kar dobara try karein." : "Waqt khatam, puzzle hal nahi hua — entry gayi."
     : forfeitNote(end);
 
-  const paid = end.mode !== "practice";
-  let amount = "Practice match";
+  const paid = end.mode === "paid" || end.mode === "challenge";
+  let amount = end.mode === "free" ? "Free match — koi paisa nahi" : "Practice match";
   let amountCls = "";
   if (paid && end.outcome === "win") { amount = end.held ? `${rs(end.prize)} review mein` : `+ ${rs(end.prize)}`; amountCls = end.held ? "" : "plus"; }
   if (paid && end.outcome === "loss") { amount = `− ${rs(end.entry)}`; amountCls = "minus"; }

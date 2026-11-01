@@ -105,7 +105,7 @@ export function joinQueue(socket, user, { category, entry }) {
 export function leaveQueue(userId) {
   for (const [key, q] of queues) {
     const i = q.findIndex((w) => w.userId === userId);
-    if (i >= 0) q.splice(i, 1);
+    if (i >= 0) clearTimeout(q.splice(i, 1)[0].botTimer);
     if (!q.length) queues.delete(key);
   }
   if (activeByUser.get(userId) === "queue") activeByUser.delete(userId);
@@ -117,15 +117,39 @@ export function cancelSearch() {
 }
 
 function categoryWaiting(category) {
-  for (const [key, q] of queues) if (key.startsWith(category + ":") && q.length) return true;
+  for (const [key, q] of queues) if (key.startsWith(category + ":") && !key.endsWith(":free") && q.length) return true;
   return false;
 }
 
+// Free play. A puzzle is solo practice. A quiz looks for another free player first (a free 1v1, no money); if nobody
+// comes within HOUSE_WAIT_SECONDS, the computer plays instead.
 export function startPractice(socket, user, { category }) {
   if (!CATEGORIES.some((c) => c.id === category)) return { error: "Category nahi mili" };
   if (activeByUser.has(user.id)) return { error: "Aap pehle se match mein hain" };
-  startMatch({ mode: "practice", category, entry: 0, a: { user, socket }, b: null });
-  return { ok: true };
+  if (PUZZLE_KINDS.includes(category)) {
+    startMatch({ mode: "practice", category, entry: 0, a: { user, socket }, b: null });
+    return { ok: true };
+  }
+  const key = `${category}:free`;
+  const q = queues.get(key) || [];
+  const oppIndex = q.findIndex((w) => w.userId !== user.id && w.socket.connected);
+  if (oppIndex >= 0) {
+    const [opp] = q.splice(oppIndex, 1);
+    if (!q.length) queues.delete(key);
+    clearTimeout(opp.botTimer);
+    startMatch({ mode: "free", category, entry: 0, a: { user: db.getUser(opp.userId), socket: opp.socket }, b: { user, socket }, since: opp.since });
+    return { ok: true };
+  }
+  const waiting = { userId: user.id, socket, since: Date.now(), category, entry: 0, free: true };
+  q.push(waiting);
+  queues.set(key, q);
+  activeByUser.set(user.id, "queue");
+  waiting.botTimer = setTimeout(() => {
+    if (!(queues.get(key) || []).includes(waiting)) return;
+    leaveQueue(user.id);
+    startMatch({ mode: "practice", category, entry: 0, a: { user: db.getUser(user.id), socket: waiting.socket }, b: null });
+  }, HOUSE_WAIT_SECONDS * 1000);
+  return { ok: true, waiting: true };
 }
 
 // No real opponent showed up within 30s (entries up to CHALLENGE_MAX_ENTRY): a solo Puzzle Challenge.
@@ -190,7 +214,7 @@ function startMatch({ mode, category, entry, a, b, since = Date.now() }) {
   const want = puzzleMatch ? 1 : QUESTIONS_PER_MATCH;
   (puzzleMatch
     ? (mode === "challenge" ? challengeRound(category) : puzzleMatchRound(category)).then((q) => [q])
-    : questionsForMatch(category, want, since + LOBBY_MAX_MS))
+    : questionsForMatch(category, want, since + LOBBY_MAX_MS, { free: !isPaid(mode) }))
     .catch((err) => {
       console.error("[game] could not prepare questions:", err);
       return [];
@@ -465,6 +489,7 @@ export function handleDisconnect(userId) {
     waiting.graceTimer = setTimeout(() => {
       if (waiting.socket.connected) return;
       leaveQueue(userId);
+      if (waiting.free) return; // a free lobby costs nothing to leave
       db.addForfeited(waiting.entry);
       db.flag({ type: "left-lobby", userId, reason: "left the lobby before a match started" });
       console.log(`[game] ${userId} left the lobby — entry Rs ${waiting.entry} forfeited`);
@@ -492,7 +517,8 @@ export function shutdown(reason) {
   for (const [key, q] of queues) {
     for (const w of q) {
       activeByUser.delete(w.userId);
-      db.addTransaction(w.userId, "refund", w.entry, "Server update — entry wapas");
+      clearTimeout(w.botTimer);
+      if (w.entry) db.addTransaction(w.userId, "refund", w.entry, "Server update — entry wapas");
       w.socket.emit("queue:cancelled", { reason, balance: db.getUser(w.userId).balance });
     }
     queues.delete(key);
@@ -506,7 +532,7 @@ export function rejoin(userId, socket) {
   if (waiting) {
     clearTimeout(waiting.graceTimer);
     waiting.socket = socket;
-    socket.emit("queue:resume", { category: waiting.category, entry: waiting.entry, prize: prizeFor(waiting.entry), since: waiting.since });
+    socket.emit("queue:resume", { category: waiting.category, entry: waiting.entry, prize: prizeFor(waiting.entry), since: waiting.since, free: !!waiting.free });
     return true;
   }
   const m = matches.get(activeByUser.get(userId));

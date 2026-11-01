@@ -34,7 +34,9 @@ export default function Searching({ info, name, avatar, houseWaitSeconds, challe
   const puzzle = info.category.group === "puzzle";
   // above challengeMaxEntry there is no Puzzle Challenge: wait for a real opponent, refund after refundSeconds
   const challenge = !practice && !puzzle && info.entry <= challengeMaxEntry;
-  const left = Math.max(0, (challenge ? houseWaitSeconds : refundSeconds) - secs);
+  // free quiz: the server looks for another free player for houseWaitSeconds, then the computer plays
+  const wait = challenge || practice ? houseWaitSeconds : refundSeconds;
+  const left = Math.max(0, wait - secs);
   const tip = TIPS[Math.floor(secs / 6) % TIPS.length];
 
   useEffect(() => {
@@ -78,11 +80,30 @@ export default function Searching({ info, name, avatar, houseWaitSeconds, challe
         <span className="ring" />
         <Avatar name={name} avatar={avatar} size="xl" />
       </div>
-      <h2>Muqabil dhoond rahe hain…</h2>
+      <h2>{practice ? "Free muqabil dhoond rahe hain…" : "Muqabil dhoond rahe hain…"}</h2>
       {!practice && (
         <p className="muted">
           Jeetne wale ko <b className="gold">{rs(info.prize)}</b>
         </p>
+      )}
+
+      {practice && (
+        <div className="wait-card card glass">
+          <div className="wait-count">
+            <svg viewBox="0 0 44 44">
+              <circle className="track" cx="22" cy="22" r="19" />
+              <circle className="bar" cx="22" cy="22" r="19" style={{ animationDuration: `${wait}s` }} />
+            </svg>
+            <b>{left}</b>
+          </div>
+          <div>
+            <b>{left > 0 ? "Asli player dhoond rahe hain…" : "Computer ke saath match shuru ho raha hai"}</b>
+            <p>
+              Free match — koi paisa nahi. {left > 0 ? `${left} second mein koi player na mila to computer ke saath khelenge.` : ""}
+            </p>
+          </div>
+          <Puzzle className="wait-bot" size={22} />
+        </div>
       )}
 
       {!practice && (
@@ -90,7 +111,7 @@ export default function Searching({ info, name, avatar, houseWaitSeconds, challe
           <div className="wait-count">
             <svg viewBox="0 0 44 44">
               <circle className="track" cx="22" cy="22" r="19" />
-              <circle className="bar" cx="22" cy="22" r="19" style={{ animationDuration: `${challenge ? houseWaitSeconds : refundSeconds}s` }} />
+              <circle className="bar" cx="22" cy="22" r="19" style={{ animationDuration: `${wait}s` }} />
             </svg>
             <b>{left}</b>
           </div>

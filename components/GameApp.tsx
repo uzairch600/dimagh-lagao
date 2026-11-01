@@ -152,11 +152,11 @@ export default function GameApp() {
     });
 
     // back in the lobby after a refresh or reconnect
-    s.on("queue:resume", (q: { category: string; entry: number; prize: number; since: number }) => {
+    s.on("queue:resume", (q: { category: string; entry: number; prize: number; since: number; free?: boolean }) => {
       setConfig((cfg) => {
         const category = cfg?.categories.find((c) => c.id === q.category);
         if (category) {
-          setSearching({ category, entry: q.entry, prize: q.prize, since: q.since });
+          setSearching({ category, entry: q.entry, prize: q.prize, since: q.since, practice: q.free });
           setScreen("searching");
         }
         return cfg;

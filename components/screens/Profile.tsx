@@ -104,10 +104,10 @@ export default function Profile({ user, config, setUser, notify, onLogout }: Pro
                 <b>vs {opp?.name}</b>
                 <small>
                   {cat?.name} • {me?.score} – {opp?.score}
-                  {m.mode === "practice" ? " • practice" : ""}
+                  {m.mode === "practice" ? " • practice" : m.mode === "free" ? " • free" : ""}
                 </small>
               </span>
-              {m.mode !== "practice" && (
+              {m.mode !== "practice" && m.mode !== "free" && (
                 <span className={`amt ${outcome === "win" ? "plus" : outcome === "loss" ? "minus" : ""}`}>
                   {outcome === "win" ? `+${rs(m.prize)}` : outcome === "loss" ? `−${rs(m.entry)}` : "±0"}
                 </span>

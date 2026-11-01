@@ -1,4 +1,4 @@
-import { Bot, Clock } from "lucide-react";
+import { Bot, Clock, Users } from "lucide-react";
 import { rs } from "@/lib/api";
 import type { Category, Config } from "@/lib/types";
 import CategoryIcon from "../CategoryIcon";
@@ -18,7 +18,7 @@ export default function PlaySheet({ category, config, balance, onPlay, onPractic
   const open = config.paymentsOpen;
   const practice = (
     <button className={`btn btn-block ${open ? "btn-ghost" : "btn-gold"}`} onClick={onPractice}>
-      <Bot size={18} /> Free practice {puzzle ? "(akele, bina paise)" : "(computer ke saath)"}
+      {puzzle ? <Bot size={18} /> : <Users size={18} />} {puzzle ? "Free practice (akele, bina paise)" : "Free match (asli players ke saath)"}
     </button>
   );
   return (

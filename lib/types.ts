@@ -69,7 +69,7 @@ export type Withdrawal = { id: string; txId: string; amount: number; method: str
 
 export type MatchSummary = {
   id: string;
-  mode: "paid" | "challenge" | "practice";
+  mode: "paid" | "challenge" | "practice" | "free"; // free: a no-money 1v1 between two players
   category: string;
   entry: number;
   prize: number;
@@ -84,7 +84,7 @@ export type PlayerInfo = { name: string; avatar: string; bot?: boolean; score?: 
 
 export type MatchFound = {
   matchId: string;
-  mode: "paid" | "challenge" | "practice";
+  mode: "paid" | "challenge" | "practice" | "free"; // free: a no-money 1v1 between two players
   category: string;
   entry: number;
   prize: number;
@@ -115,7 +115,7 @@ export type Reveal = {
 };
 
 export type MatchEnd = {
-  mode: "paid" | "challenge" | "practice";
+  mode: "paid" | "challenge" | "practice" | "free"; // free: a no-money 1v1 between two players
   outcome: "win" | "loss" | "draw";
   prize: number;
   entry: number;

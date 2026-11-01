@@ -42,6 +42,8 @@ export default function Match({ state, onAnswer, onSolve, onQuit }: Props) {
   const loses =
     found.mode === "practice"
       ? "Practice match khatam ho jayega. Koi paisa nahi katega."
+      : found.mode === "free"
+        ? "Free match khatam ho jayega aur muqabil jeet jayega. Koi paisa nahi katega."
       : found.solo
         ? `Aap ki ${rs(found.entry)} entry wapas nahi milegi aur ye match haar jayenge.`
         : `Aap ki ${rs(found.entry)} entry wapas nahi milegi, aap haar jayenge aur ${rs(found.prize)} ka inaam muqabil ko mil jayega.`;

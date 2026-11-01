@@ -203,12 +203,17 @@ export function leaderboard(limit = 50) {
     .map((u) => ({ id: u.id, name: u.name, avatar: u.avatar, wins: u.wins, losses: u.losses, earnings: u.earnings }));
 }
 
+// Matches with money ("house" is the old name of "challenge", kept for matches saved before the rename).
+const paidMode = (mode) => mode === "paid" || mode === "challenge" || mode === "house";
+// a player won (not the computer, and not the Puzzle Challenge ghost when the puzzle went unsolved)
+const realWinner = (m) => m.winner && m.winner !== "bot" && m.winner !== "challenge";
+
 // Latest paid-match winners for the live feed on the home screen.
 export function recentWins(limit = 12) {
   const out = [];
   for (let i = data.matches.length - 1; i >= 0 && out.length < limit; i--) {
     const m = data.matches[i];
-    if ((m.mode !== "paid" && m.mode !== "house") || !m.winner || m.winner === "bot") continue;
+    if (!paidMode(m.mode) || !realWinner(m)) continue;
     const w = m.players.find((p) => p.userId === m.winner);
     const l = m.players.find((p) => p.userId !== m.winner);
     out.push({ id: m.id, winner: w.name, avatar: data.users[w.userId]?.avatar, loser: l.name, prize: m.prize, category: m.category, at: m.at });
@@ -217,7 +222,7 @@ export function recentWins(limit = 12) {
 }
 
 export function paidOutSince(ts) {
-  return data.matches.reduce((sum, m) => sum + ((m.mode === "paid" || m.mode === "house") && m.winner && m.winner !== "bot" && m.at >= ts ? m.prize : 0), 0);
+  return data.matches.reduce((sum, m) => sum + (paidMode(m.mode) && realWinner(m) && m.at >= ts ? m.prize : 0), 0);
 }
 
 // The app's own profit/loss from matches it played against users (computer opponent).
