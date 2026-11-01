@@ -4,7 +4,7 @@ import { LeaderboardTable } from "@/components/site/Live";
 
 export const metadata: Metadata = {
   title: "Leaderboard",
-  description: "Dimagh Lagao ke top players — sab se zyada jeet aur kamai wale.",
+  description: "Dimagh Lagao ke top players — sab se zyada jeet aur hal kiye puzzles wale.",
 };
 
 export default function LeaderboardPage() {

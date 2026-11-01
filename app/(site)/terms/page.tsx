@@ -24,46 +24,41 @@ export default function Terms() {
           <ul>
             <li>You must be at least {SITE.minAge} years old and a resident of Pakistan.</li>
             <li>You may hold only one account. The mobile number on the account must be registered in your own name.</li>
-            <li>We may ask for identity verification (such as CNIC) at any time, and before any withdrawal.</li>
+            <li>We may ask for identity verification (such as CNIC) before awarding a prize.</li>
           </ul>
 
-          <h2>2. Nature of the game</h2>
+          <h2>2. A free game of skill</h2>
           <p>
-            {SITE.name} is a game of skill. In each match both players receive the same questions in the same order and the
-            same time limit. The result depends only on the number of correct answers and the speed of answering, as described
-            on the <Link href="/how-to-play">How to play</Link> page. There is no element of chance such as dice, cards or
-            spins.
+            Playing on {SITE.name} is free. There are no entry fees, no wallet and no stakes: you never pay to play a match and
+            you never risk money. In each quiz match both players receive the same questions in the same order and the same
+            time limit; the result depends only on correct answers and speed, as described on the{" "}
+            <Link href="/how-to-play">How to play</Link> page. There is no element of chance such as dice, cards or spins.
           </p>
 
-          <h2>3. Wallet, entry fees and prizes</h2>
+          <h2>3. Sponsored contests</h2>
           <ul>
-            <li>Paid matches require an entry fee, which is deducted from your wallet when you press Start and join the lobby.</li>
             <li>
-              The prize equals both entry fees minus a platform fee of {SITE.platformFeePercent}%. The prize for each entry
-              level is shown before you join.
+              From time to time, sponsors (brands, companies or individuals) may run contests on the Platform and provide prizes.
+              Entry to a sponsored contest is always free; no purchase or payment is needed to take part or to win.
             </li>
-            <li>If both players finish with equal points, both entry fees are returned in full.</li>
-            <li>Wallet balance is not a bank deposit and earns no interest.</li>
+            <li>Each contest shows its own rules, dates, eligibility and prizes before it starts. Those rules apply alongside these Terms.</li>
+            <li>
+              Prizes are provided by the sponsor and sent to the mobile wallet (such as Easypaisa or JazzCash) registered to the
+              winner&apos;s own mobile number, after verification. A prize may be withheld if a winner breaches these Terms or the
+              contest rules.
+            </li>
+            <li>You are responsible for any taxes that apply to a prize under Pakistani law.</li>
           </ul>
 
-          <h2>4. Puzzle Challenge</h2>
+          <h2>4. Advertising</h2>
           <p>
-            Paid quiz matches are always between two real players. If no other player is found within 30 seconds, you get a
-            Puzzle Challenge instead: one puzzle with 35 to 90 seconds to solve it, depending on the puzzle. If you solve it in time, the Platform pays you the
-            prize for your entry; if not, the entry is not refunded. Puzzle categories are always played this way, alone,
-            with no opponent. See the <Link href="/fair-play">Fair Play</Link> page. Practice matches are free and carry no
-            prize.
+            The Platform is free because it shows advertisements, and some contests carry a sponsor&apos;s branding. Ads are
+            provided by third parties (such as Google). See the <Link href="/privacy">Privacy Policy</Link> for how ads use
+            cookies.
           </p>
 
-          <h2>5. Withdrawals</h2>
-          <ul>
-            <li>You can request a withdrawal of your available balance (minimum Rs 200) to an account in your own name.</li>
-            <li>Withdrawals are reviewed before payment and are usually processed within a few working days.</li>
-            <li>We may hold a withdrawal while we investigate suspected fraud or a breach of these Terms.</li>
-          </ul>
-
-          <h2>6. Fair play</h2>
-          <p>The following are not allowed and may lead to cancelled results, forfeited balances and account closure:</p>
+          <h2>5. Fair play</h2>
+          <p>The following are not allowed and may lead to cancelled results, removal from the leaderboard or contests, and account closure:</p>
           <ul>
             <li>Creating or using more than one account, or using someone else&apos;s account.</li>
             <li>Colluding with another player, including deliberately losing.</li>
@@ -71,55 +66,40 @@ export default function Terms() {
             <li>
               During a match: switching tab or window, leaving full screen, opening developer tools, or running browser
               extensions. A player caught doing this loses the match at once and the opponent wins. If both players are caught,
-              both lose and the platform keeps both entry fees.
-            </li>
-            <li>
-              If a paid winner&apos;s answers show a suspicious pattern (for example nearly all right but nearly always late, or
-              identical timing across matches), the prize is held for review instead of being paid at once.
+              both lose.
             </li>
             <li>Exploiting bugs or interfering with the Platform.</li>
-            <li>Depositing funds that are not yours or that come from illegal activity.</li>
           </ul>
 
-          <h2>7. Question errors and disputes</h2>
+          <h2>6. Question errors and disputes</h2>
           <p>
             Questions are checked before use, but mistakes can happen. If you believe a question or answer was wrong, contact
             us within 7 days of the match. If we confirm the error, we may adjust or void the result of the affected match.
             Our decision after review is final.
           </p>
 
-          <h2>8. Technical problems</h2>
+          <h2>7. Technical problems</h2>
           <p>
-            If a match cannot be completed because of a fault on our side, the entry fees for that match are refunded. The entry
-            fee is charged when you join the lobby and cannot be cancelled. If you leave the lobby or match, or disconnect and do
-            not return within 10 seconds, you lose and the entry is not refunded.
+            If a match cannot be completed because of a fault on our side, it is cancelled without a result. If you leave a 1v1
+            match, or disconnect and do not return within 10 seconds, you lose that match.
           </p>
 
-          <h2>9. Taxes</h2>
-          <p>You are responsible for any taxes that apply to your winnings under Pakistani law.</p>
+          <h2>8. Suspension and closure</h2>
+          <p>We may suspend or close accounts that breach these Terms. You may close your account at any time by contacting us.</p>
 
-          <h2>10. Suspension and closure</h2>
-          <p>
-            We may suspend or close accounts that breach these Terms. You may close your account at any time by contacting us;
-            any available balance will be paid out after verification, subject to Section 6.
-          </p>
+          <h2>9. Liability</h2>
+          <p>The Platform is provided &quot;as is&quot;, free of charge. To the extent permitted by law, we are not liable for any indirect loss.</p>
 
-          <h2>11. Liability</h2>
-          <p>
-            The Platform is provided &quot;as is&quot;. To the extent permitted by law, our total liability to you is limited to
-            the balance in your wallet.
-          </p>
-
-          <h2>12. Changes</h2>
+          <h2>10. Changes</h2>
           <p>We may update these Terms. Material changes will be announced on the Platform before they take effect.</p>
 
-          <h2>13. Governing law</h2>
+          <h2>11. Governing law</h2>
           <p>These Terms are governed by the laws of Pakistan.</p>
 
-          <h2>14. Contact</h2>
+          <h2>12. Contact</h2>
           <p>
-            Questions about these Terms: <a href={`mailto:${SITE.email}`}>{SITE.email}</a> or the{" "}
-            <Link href="/contact">contact page</Link>.
+            Questions about these Terms, or interested in sponsoring a contest: <a href={`mailto:${SITE.email}`}>{SITE.email}</a>{" "}
+            or the <Link href="/contact">contact page</Link>.
           </p>
         </div>
       </section>

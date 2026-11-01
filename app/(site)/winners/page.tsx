@@ -6,13 +6,13 @@ import { LiveStrip, WinnersList } from "@/components/site/Live";
 
 export const metadata: Metadata = {
   title: "Winners",
-  description: "Dimagh Lagao ke taaza winners — kisne kis ko haraya aur kitna jeeta, live.",
+  description: "Dimagh Lagao ke taaza nateeje — kisne kis ko haraya aur kisne kaunsa puzzle hal kiya, live.",
 };
 
 export default function Winners() {
   return (
     <>
-      <PageHero eyebrow="Live" title="Taaza winners" sub="Har paid match ka nateeja yahan live aata hai. Agla naam aap ka ho sakta hai." />
+      <PageHero eyebrow="Live" title="Taaza winners" sub="Har 1v1 jeet aur hal kiya puzzle yahan live aata hai. Agla naam aap ka ho sakta hai." />
       <section className="site-section">
         <div className="site-container">
           <LiveStrip />

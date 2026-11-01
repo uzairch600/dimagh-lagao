@@ -10,12 +10,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT, "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 
-const STARTING_BALANCE = 0;
 const SEEN_HISTORY = 400; // how many recent question ids we remember per player
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-const empty = () => ({ users: {}, transactions: [], matches: [], withdrawals: [], messages: [], flags: [], house: { id: "house", net: 0, matches: 0 } });
+const empty = () => ({ users: {}, matches: [], messages: [], flags: [] });
 
 let data = empty();
 let fileData = null;
@@ -32,27 +31,11 @@ const byAt = (a, b) => (a.at ?? 0) - (b.at ?? 0);
 
 if (store.enabled) {
   await store.init();
-  const [users, transactions, matches, withdrawals, messages, kv, flags] = await Promise.all(
-    ["users", "transactions", "matches", "withdrawals", "messages", "kv", "flags"].map((t) => store.loadAll(t)),
-  );
-  if (users.length === 0 && fileData && Object.keys(fileData.users).length) {
-    // first run against an empty database: carry over the local test data
-    data = fileData;
-    data.house = { id: "house", net: 0, matches: 0, ...data.house };
-    for (const u of Object.values(data.users)) store.queue("users", u);
-    for (const t of ["transactions", "matches", "withdrawals", "messages"]) for (const r of data[t] || []) store.queue(t, r);
-    store.queue("kv", data.house);
-    await store.flush();
-    console.log("[db] copied local data into Supabase");
-  } else {
-    data.users = Object.fromEntries(users.map((u) => [u.id, u]));
-    data.transactions = transactions.sort(byAt);
-    data.matches = matches.sort(byAt);
-    data.withdrawals = withdrawals.sort(byAt);
-    data.messages = messages.sort(byAt);
-    data.flags = flags.sort(byAt);
-    data.house = kv.find((r) => r.id === "house") || data.house;
-  }
+  const [users, matches, messages, flags] = await Promise.all(["users", "matches", "messages", "flags"].map((t) => store.loadAll(t)));
+  data.users = Object.fromEntries(users.map((u) => [u.id, u]));
+  data.matches = matches.sort(byAt);
+  data.messages = messages.sort(byAt);
+  data.flags = flags.sort(byAt);
 } else if (fileData) {
   data = fileData;
 }
@@ -82,11 +65,10 @@ export function publicUser(u) {
     name: u.name,
     phone: u.phone,
     avatar: u.avatar,
-    balance: u.balance,
     wins: u.wins,
     losses: u.losses,
     draws: u.draws,
-    earnings: u.earnings,
+    puzzles: u.puzzles || 0,
   };
 }
 
@@ -111,11 +93,10 @@ export function createUser({ name, phone, avatar, pinHash }) {
     phone,
     pinHash,
     avatar,
-    balance: STARTING_BALANCE,
     wins: 0,
     losses: 0,
     draws: 0,
-    earnings: 0,
+    puzzles: 0,
     seen: [],
     createdAt: Date.now(),
   };
@@ -132,35 +113,6 @@ export function updateProfile(userId, { name, avatar }) {
   return u;
 }
 
-// Every balance change goes through here so the ledger always matches the balance.
-export function addTransaction(userId, type, amount, note) {
-  const u = data.users[userId];
-  if (!u) throw new Error("user not found");
-  if (u.balance + amount < 0) throw new Error("insufficient balance");
-  u.balance += amount;
-  const tx = { id: newId(), userId, type, amount, note, balanceAfter: u.balance, at: Date.now() };
-  data.transactions.push(tx);
-  save("users", u);
-  save("transactions", tx);
-  return tx;
-}
-
-export function transactionsFor(userId, limit = 50) {
-  return data.transactions.filter((t) => t.userId === userId).slice(-limit).reverse();
-}
-
-export function createWithdrawal(userId, amount, method, account) {
-  const tx = addTransaction(userId, "withdraw", -amount, `Withdraw request (${method})`);
-  const w = { id: newId(), userId, amount, method, account, status: "pending", txId: tx.id, at: Date.now() };
-  data.withdrawals.push(w);
-  save("withdrawals", w);
-  return w;
-}
-
-export function withdrawalsFor(userId) {
-  return data.withdrawals.filter((w) => w.userId === userId).reverse();
-}
-
 export function recordMatch(m) {
   data.matches.push(m);
   if (data.matches.length > 5000) data.matches.splice(0, data.matches.length - 5000);
@@ -174,13 +126,20 @@ export function matchesFor(userId, limit = 20) {
     .reverse();
 }
 
-export function applyResult(userId, outcome, prizeWon) {
+// A finished 1v1 against a real player.
+export function applyResult(userId, outcome) {
   const u = data.users[userId];
   if (!u) return;
   if (outcome === "win") u.wins++;
   else if (outcome === "loss") u.losses++;
   else u.draws++;
-  u.earnings += prizeWon;
+  save("users", u);
+}
+
+export function addPuzzleSolved(userId) {
+  const u = data.users[userId];
+  if (!u) return;
+  u.puzzles = (u.puzzles || 0) + 1;
   save("users", u);
 }
 
@@ -197,39 +156,28 @@ export function seenSet(userId) {
 
 export function leaderboard(limit = 50) {
   return Object.values(data.users)
-    .filter((u) => u.wins + u.losses + u.draws > 0)
-    .sort((a, b) => b.earnings - a.earnings || b.wins - a.wins)
+    .filter((u) => u.wins + u.losses + u.draws + (u.puzzles || 0) > 0)
+    .sort((a, b) => b.wins - a.wins || (b.puzzles || 0) - (a.puzzles || 0) || a.losses - b.losses)
     .slice(0, limit)
-    .map((u) => ({ id: u.id, name: u.name, avatar: u.avatar, wins: u.wins, losses: u.losses, earnings: u.earnings }));
+    .map((u) => ({ id: u.id, name: u.name, avatar: u.avatar, wins: u.wins, losses: u.losses, puzzles: u.puzzles || 0 }));
 }
 
-// Matches with money ("house" is the old name of "challenge", kept for matches saved before the rename).
-const paidMode = (mode) => mode === "paid" || mode === "challenge" || mode === "house";
-// a player won (not the computer, and not the Puzzle Challenge ghost when the puzzle went unsolved)
-const realWinner = (m) => m.winner && m.winner !== "bot" && m.winner !== "challenge";
-
-// Latest paid-match winners for the live feed on the home screen.
+// Latest results for the live feed: 1v1 wins against real players and solved puzzles.
 export function recentWins(limit = 12) {
   const out = [];
   for (let i = data.matches.length - 1; i >= 0 && out.length < limit; i--) {
     const m = data.matches[i];
-    if (!paidMode(m.mode) || !realWinner(m)) continue;
     const w = m.players.find((p) => p.userId === m.winner);
-    const l = m.players.find((p) => p.userId !== m.winner);
-    out.push({ id: m.id, winner: w.name, avatar: data.users[w.userId]?.avatar, loser: l.name, prize: m.prize, category: m.category, at: m.at });
+    if (!w || w.userId === "bot" || w.userId === "ghost") continue;
+    const opp = m.players.find((p) => p !== w);
+    if (m.mode === "free") out.push({ id: m.id, kind: "win", winner: w.name, avatar: data.users[w.userId]?.avatar, loser: opp.name, category: m.category, at: m.at });
+    else if (opp.userId === "ghost") out.push({ id: m.id, kind: "puzzle", winner: w.name, avatar: data.users[w.userId]?.avatar, category: m.category, at: m.at });
   }
   return out;
 }
 
-export function paidOutSince(ts) {
-  return data.matches.reduce((sum, m) => sum + (paidMode(m.mode) && realWinner(m) && m.at >= ts ? m.prize : 0), 0);
-}
-
-// The app's own profit/loss from matches it played against users (computer opponent).
-export function addHouse(amount) {
-  data.house.net += amount;
-  if (amount > 0) data.house.matches++;
-  save("kv", data.house);
+export function matchesSince(ts) {
+  return data.matches.filter((m) => m.at >= ts).length;
 }
 
 // Messages from the website contact form (Supabase table app.messages until there's an admin panel).
@@ -252,40 +200,4 @@ export function allSeenIds() {
   const ids = new Set();
   for (const u of Object.values(data.users)) for (const id of u.seen || []) ids.add(id);
   return ids;
-}
-
-// Keeps each player's average answer time for the last few matches (cross-match timing check).
-export function recordTiming(userId, avgMs) {
-  const u = data.users[userId];
-  if (!u) return [];
-  u.timings = [...(u.timings || []), Math.round(avgMs)].slice(-5);
-  save("users", u);
-  return u.timings;
-}
-
-// Entries the platform keeps when players leave the lobby or cheat (no winner to pay).
-// A winner whose answers look suspicious waits for a review instead of being paid at once.
-export function holdPrize({ userId, matchId, amount, house, reasons }) {
-  return flag({ type: "prize-held", status: "pending", userId, matchId, amount, house: !!house, reasons });
-}
-
-// Review outcome for a held prize: pay it, or keep it (the player then counts as having won nothing).
-export function reviewHeldPrize(flagId, approve) {
-  const f = (data.flags || []).find((x) => x.id === flagId && x.type === "prize-held" && x.status === "pending");
-  if (!f) throw new Error("no pending held prize with that id");
-  if (approve) {
-    addTransaction(f.userId, "prize", f.amount, "Match inaam (review ke baad)");
-    const u = data.users[f.userId];
-    if (u) { u.earnings += f.amount; save("users", u); }
-    if (f.house) addHouse(-f.amount);
-  } else if (!f.house) addForfeited(f.amount);
-  f.status = approve ? "paid" : "rejected";
-  f.reviewedAt = Date.now();
-  save("flags", f);
-  return f;
-}
-
-export function addForfeited(amount) {
-  data.house.forfeited = (data.house.forfeited || 0) + amount;
-  save("kv", data.house);
 }

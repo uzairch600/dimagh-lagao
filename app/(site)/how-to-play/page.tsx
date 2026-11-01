@@ -1,93 +1,70 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Bot, Clock, Target, Timer, Trophy, Wallet } from "lucide-react";
+import { ArrowRight, Bot, Gift, Puzzle, Target, Timer, Trophy } from "lucide-react";
 import PageHero from "@/components/site/PageHero";
-import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Kaise khelein",
-  description: "Dimagh Lagao kaise khelein — account, entry, 1v1 match, scoring aur inaam ki poori tafseel.",
+  description: "Dimagh Lagao kaise khelein — account, free 1v1 quiz match, 20 puzzles, scoring aur leaderboard ki poori tafseel.",
 };
-
-const fee = SITE.platformFeePercent;
-const prize = (e: number) => Math.round(e * 2 * (1 - fee / 100));
 
 export default function HowToPlay() {
   return (
     <>
-      <PageHero eyebrow="Guide" title="Kaise khelein?" sub="Do minute ka match, das sawal, ek winner. Yahan sab kuch tafseel se." />
+      <PageHero eyebrow="Guide" title="Kaise khelein?" sub="Do minute ka match, das sawal, ek winner — aur sab kuch free. Yahan tafseel se." />
       <section className="site-section">
         <div className="site-container prose-grid">
           <article className="prose">
             <h2>1. Account banayein</h2>
             <p>
               <Link href="/play">Play</Link> page par apna mobile number likhein, naam aur 4-digit PIN banayein. Bas. Agli baar
-              isi number aur PIN se login karein. Ek insaan sirf ek account bana sakta hai.
+              isi number aur PIN se login karein. Ek insaan sirf ek account bana sakta hai. Sirf apna wohi number likhein jis par
+              aap ka Easypaisa ya JazzCash hai — sponsor muqablon ka inaam isi number par bheja jayega.
             </p>
 
-            <h2>2. Wallet mein paise daalein</h2>
+            <h2>2. Category chunein</h2>
             <p>
-              Wallet mein jaa kar &quot;Paise daalein&quot; dabayein. Paise sirf aap ke wallet mein jate hain aur har entry, inaam
-              aur withdraw ki history wahan dikhti hai.
+              7 quiz categories (World GK, Cricket, Science, Math, IT, AI, Entertainment) aur 20 puzzles. Har match{" "}
+              <b>bilkul free</b> hai — koi entry fee nahi, koi paisa nahi lagta.
             </p>
 
-            <h2>3. Category aur entry chunein</h2>
-            <p>Har category ke liye 4 entry levels hain:</p>
-            <table className="site-table">
-              <thead>
-                <tr><th>Entry</th><th>Kul pot</th><th>Jeetne wale ko</th></tr>
-              </thead>
-              <tbody>
-                {[20, 50, 100, 500, 1000].map((e) => (
-                  <tr key={e}>
-                    <td>Rs {e}</td>
-                    <td>Rs {e * 2}</td>
-                    <td className="gold"><b>Rs {prize(e)}</b></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="muted">Platform fee {fee}% hai — yahi hamari kamai hai.</p>
-
-            <h2>4. Muqabil se match</h2>
+            <h2>3. Muqabil se match</h2>
             <p>
-              App aap ko usi category aur usi entry wale kisi asli player se milaati hai. Start dabate hi entry fee kat jati hai aur
-              lobby se wapsi nahi hoti. Agar <b>30 second</b> mein koi player na mile, to aap ko <b>Puzzle Challenge</b> milta hai: ek puzzle aur
-              35–90 second (puzzle ke hisaab se). Waqt par hal kiya to match ka poora inaam aap ka, warna entry gayi.
+              App aap ko usi category ke kisi asli player se milaati hai. Agar <b>30 second</b> mein koi player na mile, to computer aap
+              ke saath khelta hai. Lobby mein &quot;Wapas&quot; daba kar kabhi bhi nikal sakte hain.
             </p>
 
-            <h2>5. Scoring</h2>
+            <h2>4. Scoring</h2>
             <p>Dono players ko bilkul same 10 sawal, same order mein milte hain. Har sawal ke liye 10 second.</p>
             <ul>
               <li><b>Sahi jawab 2 second ke andar:</b> 100 points</li>
               <li><b>Us ke baad:</b> har second ke saath kam, aakhri second par 10 points</li>
               <li><b>Ghalat ya time khatam:</b> 0 points</li>
             </ul>
-            <p>10 sawal ke baad jiske points zyada, wohi jeeta. Barabar points par dono ki entry wapas.</p>
+            <p>10 sawal ke baad jiske points zyada, wohi jeeta. Asli player se har jeet leaderboard par ginti hai.</p>
 
             <h2>Puzzles</h2>
             <p>
               Khelein mein Quiz ke saath 20 puzzles bhi hain — <b>Taaj</b>, <b>Sudoku</b>, <b>Lafz Dhoondo</b>, <b>Gend Tarteeb</b>,{" "}
               <b>Hisaab Jor</b>, <b>Pipe Jor</b> aur bohat se aur. Puzzle akele khela jata hai — koi muqabil nahi: 1 puzzle, 35–90
-              second (puzzle ke hisaab se). Board poora sahi hote hi server check karta hai — waqt par hal kiya to inaam aap ka, warna entry gayi.
-              Free practice bhi hai. Har puzzle card par
-              &quot;Kaise khelein&quot; dabayein: ek haath puzzle hal kar ke dikhata hai, phir aap chhote puzzle par khud practice kar
-              sakte hain.
+              second (puzzle ke hisaab se). Board poora sahi hote hi server check karta hai — waqt par hal kiya to leaderboard par ek
+              puzzle aur jud jata hai. Har puzzle card par &quot;Kaise khelein&quot; dabayein: ek haath puzzle hal kar ke dikhata hai,
+              phir aap chhote puzzle par khud practice kar sakte hain.
             </p>
 
-            <h2>6. Inaam aur withdraw</h2>
+            <h2>5. Leaderboard aur sponsor muqable</h2>
             <p>
-              Jeetne par inaam foran wallet mein aa jata hai. Wallet se Easypaisa, JazzCash ya bank account mein withdraw request
-              bhej sakte hain. Tafseel ke liye <Link href="/refund-policy">Refund Policy</Link> dekhein.
+              Leaderboard par asli players se jeet aur waqt par hal kiye puzzles gine jaate hain. Jald hi brands aur sponsors apne
+              muqable karwayenge — aap free khelenge, aur inaam sponsor dega. Aap ka ek paisa bhi daao par nahi lagta.
             </p>
           </article>
 
           <aside className="side-cards">
             <div className="side-card"><Timer size={22} /><b>10 sawal × 10 second</b><p>Poora match taqreeban 2 minute.</p></div>
             <div className="side-card"><Target size={22} /><b>Sahi + tez = jeet</b><p>Jitna tez sahi jawab, utne zyada points.</p></div>
-            <div className="side-card"><Bot size={22} /><b>30 second rule</b><p>Player na mile to app khud khelti hai.</p></div>
-            <div className="side-card"><Wallet size={22} /><b>Draw par refund</b><p>Barabar points par entry wapas.</p></div>
-            <div className="side-card"><Clock size={22} /><b>Practice free</b><p>Computer ke saath free practice, koi paisa nahi.</p></div>
+            <div className="side-card"><Bot size={22} /><b>30 second rule</b><p>Player na mile to computer khelta hai.</p></div>
+            <div className="side-card"><Puzzle size={22} /><b>20 puzzles</b><p>Har ek ka live demo aur practice.</p></div>
+            <div className="side-card"><Gift size={22} /><b>Bilkul free</b><p>Koi entry fee nahi, koi jua nahi.</p></div>
             <Link href="/play" className="btn btn-gold btn-block">
               <Trophy size={18} /> Abhi khelein <ArrowRight size={18} />
             </Link>

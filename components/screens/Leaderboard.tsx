@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, rs } from "@/lib/api";
+import { api } from "@/lib/api";
 import { Crown } from "lucide-react";
 import type { LeaderRow, User } from "@/lib/types";
 import Avatar from "../Avatar";
@@ -31,7 +31,7 @@ export default function Leaderboard({ me }: { me: User }) {
                 {i === 1 && <Crown className="crown" size={22} />}
                 <Avatar name={p.name} avatar={p.avatar} />
                 <b>{p.name}</b>
-                <small>{rs(p.earnings)}</small>
+                <small>{p.wins} jeet • {p.puzzles} puzzle</small>
                 <div className="base">{[2, 1, 3][i]}</div>
               </div>
             ) : (
@@ -51,7 +51,7 @@ export default function Leaderboard({ me }: { me: User }) {
               {p.wins} jeet • {p.losses} haar
             </small>
           </span>
-          <span className="earn">{rs(p.earnings)}</span>
+          <span className="earn">{p.puzzles} 🧩</span>
         </div>
       ))}
     </section>

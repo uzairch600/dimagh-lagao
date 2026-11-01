@@ -1,5 +1,4 @@
-import { Clock, Gamepad2, Plus, Timer, Trophy, Zap } from "lucide-react";
-import { rs } from "@/lib/api";
+import { Gamepad2, Puzzle, Timer, Trophy, Users, Zap } from "lucide-react";
 import type { Config, Screen, User } from "@/lib/types";
 import Avatar from "../Avatar";
 import LiveFeed from "../LiveFeed";
@@ -10,7 +9,6 @@ type Props = { user: User; config: Config; go: (s: Screen) => void };
 export default function Home({ user, config, go }: Props) {
   const played = user.wins + user.losses + user.draws;
   const rate = played ? Math.round((user.wins / played) * 100) : 0;
-  const maxPrize = Math.max(...config.tiers.map((t) => t.prize));
 
   return (
     <section className="screen dash">
@@ -22,38 +20,27 @@ export default function Home({ user, config, go }: Props) {
             <b>{user.name}</b>
           </span>
         </button>
-        <button className="balance-pill" onClick={() => go("wallet")}>
-          <span className="coin">₨</span>
-          <b>{user.balance.toLocaleString("en-PK")}</b>
-          <span className="plus">
-            <Plus size={16} strokeWidth={3} />
+        <button className="balance-pill" onClick={() => go("leaderboard")} aria-label="Leaderboard">
+          <span className="coin">
+            <Trophy size={15} />
           </span>
+          <b>{user.wins}</b>
+          <small>jeet</small>
         </button>
       </header>
 
       <div className="home-hero">
         <div className="home-hero-copy">
-          <span className="tag">{config.paymentsOpen ? "LIVE 1v1" : "FREE PRACTICE"}</span>
+          <span className="tag">LIVE 1v1 • FREE</span>
           <h2>
             Aaj kis ko <span className="gold">harana</span> hai?
           </h2>
-          {config.paymentsOpen ? (
-            <p>Category chunein, muqabil se milein, aur {rs(maxPrize)} tak jeetein.</p>
-          ) : (
-            // until the payment gateway is connected: say so plainly, so nobody thinks the site is broken
-            <p>
-              <b>Paid matches jald aa rahe hain</b> — tab {rs(maxPrize)} tak jeet sakenge. Abhi free practice khelein aur dimagh tez
-              karein.
-            </p>
-          )}
+          <p>Category chunein, asli player se muqabla karein, aur leaderboard par sab se upar aayein — bilkul free.</p>
           <div className="home-hero-chips">
+            <span><Users size={14} /> Asli players</span>
             <span><Zap size={14} /> {config.questions} sawal</span>
             <span><Timer size={14} /> {config.seconds} sec har sawal</span>
-            {config.paymentsOpen ? (
-              <span><Trophy size={14} /> {rs(maxPrize)} tak</span>
-            ) : (
-              <span><Clock size={14} /> Paid matches: jald</span>
-            )}
+            <span><Puzzle size={14} /> {user.puzzles} puzzle hal</span>
           </div>
         </div>
         <img className="home-hero-art" src="/images/hero.webp" alt="" width={1408} height={768} />

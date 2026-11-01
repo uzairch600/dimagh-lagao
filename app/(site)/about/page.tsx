@@ -24,16 +24,16 @@ export default function About() {
             </p>
             <h2>Kyun banaya</h2>
             <p>
-              Zyada tar &quot;earning&quot; apps qismat par chalti hain. Hum chahte the ke jeet sirf us ki ho jo zyada jaanta hai
+              Zyada tar &quot;earning&quot; apps qismat ya paison ke daao par chalti hain. Hum chahte the ke khel bilkul free ho, aur jeet sirf us ki ho jo zyada jaanta hai
               aur tez sochta hai. Is liye har match mein dono players ko same sawal, same waqt milta hai, aur faisla server
               karta hai.
             </p>
             <h2>Hamare usool</h2>
             <ul>
               <li><b>Skill, qismat nahi</b> — koi spin, dice ya card nahi.</li>
-              <li><b>Saaf hisaab</b> — platform fee {SITE.platformFeePercent}%, har rupaye ki history wallet mein.</li>
+              <li><b>Koi jua nahi</b> — har match free hai, kisi ka paisa daao par nahi lagta. Inaam sirf sponsor dete hain.</li>
               <li><b>Koi dhoka nahi</b> — computer opponent hamesha &quot;Computer&quot; likha hota hai.</li>
-              <li><b>Zimmedari</b> — sirf {SITE.minAge}+ players, aur apni had mein khelne ki targhib.</li>
+              <li><b>Zimmedari</b> — sirf {SITE.minAge}+ players, aur sehatmand had mein khelne ki targhib.</li>
             </ul>
           </article>
           <aside className="side-cards">

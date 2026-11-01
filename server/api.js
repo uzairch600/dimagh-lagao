@@ -7,12 +7,6 @@ import * as game from "./game.js";
 import { CATEGORIES, aiStatus, poolStats, warmUp } from "./questions.js";
 import { PUZZLE_SECONDS } from "./puzzles.js";
 
-// Demo mode: "Add money" just credits the wallet so the game can be tested without a payment gateway.
-const DEMO_MODE = process.env.DEMO_MODE !== "false";
-// Deposits work only in demo mode until the payment gateway (Easypaisa / JazzCash) is connected. While closed, the
-// app says paid matches are coming soon and points players to free practice.
-const PAYMENTS_OPEN = DEMO_MODE;
-const MIN_WITHDRAW = 200;
 // Avatar = one of the illustrated animals drawn by components/Avatar.tsx.
 const AVATARS = ["fox", "cat", "owl", "bear", "bunny", "penguin", "tiger", "lion"];
 
@@ -68,20 +62,12 @@ function auth(req, res, next) {
 }
 
 const config = () => ({
-  puzzleSeconds: PUZZLE_SECONDS,
-  demoMode: DEMO_MODE,
-  paymentsOpen: PAYMENTS_OPEN,
   categories: CATEGORIES,
-  tiers: game.ENTRY_TIERS.map((entry) => ({ entry, prize: game.prizeFor(entry) })),
-  puzzleTiers: game.PUZZLE_TIERS.map((entry) => ({ entry, prize: game.prizeFor(entry) })),
-  challengeMaxEntry: game.CHALLENGE_MAX_ENTRY,
-  noOpponentRefundSeconds: game.NO_OPPONENT_REFUND_MS / 1000,
+  puzzleSeconds: PUZZLE_SECONDS,
   questions: game.QUESTIONS_PER_MATCH,
   seconds: game.SECONDS_PER_QUESTION,
-  rake: game.RAKE,
   scoring: { max: game.MAX_POINTS, min: game.MIN_POINTS, fullMs: game.FULL_POINTS_SHARE * game.SECONDS_PER_QUESTION * 1000 },
-  minWithdraw: MIN_WITHDRAW,
-  houseWaitSeconds: game.HOUSE_WAIT_SECONDS,
+  opponentWaitSeconds: game.OPPONENT_WAIT_SECONDS,
   avatars: AVATARS,
 });
 
@@ -135,36 +121,6 @@ app.post("/api/profile", auth, (req, res) => {
   res.json({ user: db.publicUser(db.updateProfile(req.user.id, { name, avatar })) });
 });
 
-app.get("/api/wallet", auth, (req, res) => {
-  res.json({
-    balance: req.user.balance,
-    transactions: db.transactionsFor(req.user.id),
-    withdrawals: db.withdrawalsFor(req.user.id),
-  });
-});
-
-app.post("/api/wallet/deposit", auth, (req, res) => {
-  if (!PAYMENTS_OPEN) return res.status(400).json({ error: "Paid matches jald aa rahe hain — abhi free practice khelein" });
-  const amount = Number(req.body.amount);
-  if (![100, 250, 500, 1000].includes(amount)) return res.status(400).json({ error: "Ghalat amount" });
-  if (req.user.balance + amount > 10_000) return res.status(400).json({ error: "Demo wallet ki hadd Rs 10,000 hai" });
-  db.addTransaction(req.user.id, "deposit", amount, "Demo deposit");
-  res.json({ balance: req.user.balance });
-});
-
-app.post("/api/wallet/withdraw", auth, (req, res) => {
-  const amount = Math.floor(Number(req.body.amount));
-  const method = ["easypaisa", "jazzcash", "bank"].includes(req.body.method) ? req.body.method : null;
-  const account = String(req.body.account || "").trim().slice(0, 40);
-  if (!method) return res.status(400).json({ error: "Payment method chunein" });
-  if (account.length < 6) return res.status(400).json({ error: "Account / number likhein" });
-  if (!(amount >= MIN_WITHDRAW)) return res.status(400).json({ error: `Kam az kam Rs ${MIN_WITHDRAW} nikal sakte hain` });
-  if (amount > req.user.balance) return res.status(400).json({ error: "Balance kam hai" });
-  if (game.status(req.user.id) !== "idle") return res.status(400).json({ error: "Match khatam hone ke baad try karein" });
-  const w = db.createWithdrawal(req.user.id, amount, method, account);
-  res.json({ withdrawal: w, balance: req.user.balance });
-});
-
 const contactTimes = new Map(); // ip -> last message time
 app.post("/api/contact", (req, res) => {
   const name = cleanName(req.body.name);
@@ -181,15 +137,15 @@ app.post("/api/contact", (req, res) => {
   res.json({ ok: true });
 });
 
-// Real numbers only: people connected right now, players in a match, and the latest winners.
+// Real numbers only: people connected right now, players in a match, matches today and the latest results.
 let onlineCount = () => 0;
 app.get("/api/live", (req, res) => {
   const startOfDay = new Date().setHours(0, 0, 0, 0);
   res.json({
     online: onlineCount(),
     ...game.liveCounts(),
-    paidToday: db.paidOutSince(startOfDay),
-    recent: db.recentWins(),
+    matchesToday: db.matchesSince(startOfDay),
+    recent: db.recentWins().map((r) => ({ ...r, categoryName: CATEGORIES.find((c) => c.id === r.category)?.name ?? r.category })),
   });
 });
 
@@ -216,16 +172,11 @@ export function attachRealtime(httpServer) {
     // nothing to resume (e.g. the server restarted mid-match): tell the client so it doesn't sit on a dead board
     if (!game.rejoin(userId, socket)) socket.emit("session:idle");
 
-    socket.on("queue:join", (payload, cb) => {
-      const result = game.joinQueue(socket, db.getUser(userId), { category: payload?.category, entry: Number(payload?.entry) });
-      cb?.(result);
-    });
-    socket.on("queue:leave", (_, cb) => cb?.(game.cancelSearch(userId)));
-    socket.on("challenge:start", (payload, cb) => {
-      cb?.(game.startChallenge(socket, db.getUser(userId), { category: payload?.category, entry: Number(payload?.entry) }));
-    });
-    socket.on("practice:start", (payload, cb) => {
-      cb?.(game.startPractice(socket, db.getUser(userId), { category: payload?.category }));
+    socket.on("play:start", (payload, cb) => cb?.(game.play(socket, db.getUser(userId), { category: payload?.category })));
+    // the lobby is free, so a player can step out of it before a match starts
+    socket.on("queue:leave", (_, cb) => {
+      game.leaveQueue(userId);
+      cb?.({ ok: true });
     });
     socket.on("match:answer", (payload) => game.answer(userId, payload || {}));
     socket.on("match:strike", (payload) => game.strike(userId, payload || {}));
@@ -236,7 +187,6 @@ export function attachRealtime(httpServer) {
 }
 
 export function startBackground() {
-  console.log(`  Demo mode: ${DEMO_MODE ? "ON (paise asli nahi)" : "OFF"}`);
   console.log(`  AI questions: ${aiStatus()}`);
   console.log("  Question pool:", poolStats(), "\n");
   warmUp();

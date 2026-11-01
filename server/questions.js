@@ -1,6 +1,6 @@
 // Question bank: hand-written seed questions + a pool that Claude Haiku keeps topped up.
 // Every AI batch goes through a second "fact-check" call and only questions that pass are kept,
-// because a wrong answer key in a paid match means a real dispute.
+// because a wrong answer key in a contest with a prize means a real dispute.
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -240,7 +240,7 @@ const VerdictSchema = z.object({
   verdicts: z.array(z.object({ number: z.number().int(), ok: z.boolean(), problem: z.string() })),
 });
 
-const GEN_SYSTEM = `You write multiple-choice quiz questions for a Pakistani 1v1 quiz-battle app with money prizes. The players are ordinary Pakistanis: students, office workers, cricket fans, people who follow the news and watch dramas. Accuracy matters more than anything.
+const GEN_SYSTEM = `You write multiple-choice quiz questions for a Pakistani 1v1 quiz-battle app where the best players win sponsored prizes. The players are ordinary Pakistanis: students, office workers, cricket fans, people who follow the news and watch dramas. Accuracy matters more than anything.
 Rules:
 - Build every question ONLY on the researched facts you are given. Never invent a fact.
 - Level: hard but FAIR. A well-read Pakistani who follows this topic should be able to get it right; a casual player should find it a real challenge. Never ask what only a specialist, a researcher or a foreigner living there could know.
@@ -260,7 +260,7 @@ Rules:
 - If a fact can change over time, put the date or season in the question. Never use "current", "latest", "now" or "recently".
 - Simple English. Nothing religiously, politically or ethnically controversial; nothing about celebrities' private lives.`;
 
-const VERIFY_SYSTEM = `You are a strict fact-checker for a quiz app with money prizes. You get researched facts and a list of questions. For each question, set ok=true only if ALL of these hold:
+const VERIFY_SYSTEM = `You are a strict fact-checker for a quiz app where players win prizes. You get researched facts and a list of questions. For each question, set ok=true only if ALL of these hold:
 - the marked correct answer is directly supported by the researched facts (or is a fact you are completely certain of),
 - none of the wrong answers could also be considered correct,
 - the question is unambiguous, and any time-sensitive fact is pinned to a date or season in the question,
@@ -543,8 +543,8 @@ export function prefetch(category, count) {
 // Called when a match starts. Never returns a question that was used before, anywhere.
 // deadlineAt: if the AI isn't done by then, the match starts with stored questions; the AI run keeps going in the
 // background and its questions stay in the pool for later matches.
-// Free matches (no money) recycle the whole stored pool, used or not: no AI cost, and the never-shown questions stay
-// for paid matches.
+// Matches recycle the whole stored pool, used or not: no AI cost. (AI generation below is kept for refreshing the
+// pool later; matches no longer call it.)
 function recycled(category, count) {
   const usable = (pool[category] || []).filter((x) => !(x.source === "ai-match" && !x.web));
   return shuffle(usable).slice(0, count).map(toMatchQuestion);

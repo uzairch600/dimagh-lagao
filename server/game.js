@@ -1,41 +1,34 @@
-// Matchmaking and live 1v1 matches. The server owns the clock and the answer key:
-// clients never see the correct answer until both players have answered (or time runs out).
+// Matchmaking and live matches. Everything is free: no entry fees, no prizes, no money of any kind.
+// The server owns the clock and the answer key: clients never see the correct answer until both players have answered
+// (or time runs out).
+//
+//   free     - a quiz 1v1 between two real players
+//   practice - a quiz against the computer (when no other player came), or a puzzle played alone
 import crypto from "node:crypto";
 import * as db from "./db.js";
-import { CATEGORIES, prefetch, questionsForMatch } from "./questions.js";
+import { CATEGORIES, questionsForMatch } from "./questions.js";
 import { PUZZLE_KINDS, puzzleRound } from "./puzzles.js";
 
 export const QUESTIONS_PER_MATCH = 10;
 // 10s: enough to read a hard question and four options on a phone, too short to ask an AI on a second
 // phone and still score well (that takes 8-10s, which speed scoring turns into ~10-20 points).
 export const SECONDS_PER_QUESTION = 10;
-export const RAKE = 0.3; // platform share of the pot; the winner gets the other 70%
 // Speed scoring: a right answer within the first FULL_POINTS_SHARE of the time earns MAX_POINTS (2s of a 10s
 // question), then falls linearly to MIN_POINTS at the last second. A wrong answer earns 0.
 export const MAX_POINTS = 100;
 export const MIN_POINTS = 10;
 export const FULL_POINTS_SHARE = 0.2;
-const LATE_SHARE = 0.6; // a right answer after 60% of the time (6s of 10s) counts as "late" for the prize review
-// Most questions get SECONDS_PER_QUESTION; logic puzzles carry their own time, set by how hard they are.
+// Most questions get SECONDS_PER_QUESTION; a puzzle carries its own time, set by how hard it is.
 const secondsFor = (q) => q.seconds ?? SECONDS_PER_QUESTION;
-export const ENTRY_TIERS = [20, 50, 100, 500, 1000]; // quiz
-// Puzzles can be practised from a demo and solved quickly, so they stay small.
-export const PUZZLE_TIERS = [20, 50, 100];
-// The Puzzle Challenge (platform pays the prize) is only offered up to this entry. Bigger quiz entries wait for a
-// real opponent, and get their entry back after NO_OPPONENT_REFUND_MS.
-export const CHALLENGE_MAX_ENTRY = 100;
-export const NO_OPPONENT_REFUND_MS = 120_000;
-const tiersFor = (category) => (PUZZLE_KINDS.includes(category) ? PUZZLE_TIERS : ENTRY_TIERS);
+export const OPPONENT_WAIT_SECONDS = 30; // a quiz player waits this long for a real opponent, then the computer plays
 const GRACE_MS = 600; // network allowance on the answer deadline
 const REVEAL_MS = 1800;
-const PUZZLE_REVEAL_MS = 4000; // time to look at the solution before the next puzzle
+const PUZZLE_REVEAL_MS = 4000; // time to look at the solution
 const COUNTDOWN_MS = 3500;
 const RECONNECT_MS = 10_000; // a dropped player has this long to come back before forfeiting
-const STRIKE_GAP_MS = 1500; // blur + visibilitychange fire together: count them once
+const BOT_SKILL = { accuracy: 0.6, minMs: 2000, maxMs: 8500 };
 
-export const prizeFor = (entry) => Math.round(entry * 2 * (1 - RAKE));
-
-const queues = new Map(); // `${category}:${entry}` -> [{ userId, socket }]
+const queues = new Map(); // category -> [{ userId, socket, since, category }]
 const matches = new Map(); // matchId -> match
 const activeByUser = new Map(); // userId -> matchId | "queue"
 
@@ -62,44 +55,34 @@ const humans = (m) => m.players.filter((p) => !p.bot);
 
 // ---------- matchmaking ----------
 
-export function joinQueue(socket, user, { category, entry }) {
+// A puzzle starts at once, played alone. A quiz looks for another player first (a 1v1); if nobody comes within
+// OPPONENT_WAIT_SECONDS, the computer plays instead.
+export function play(socket, user, { category }) {
   if (!CATEGORIES.some((c) => c.id === category)) return { error: "Category nahi mili" };
-  if (!tiersFor(category).includes(entry)) return { error: "Ghalat entry fee" };
   if (activeByUser.has(user.id)) return { error: "Aap pehle se match mein hain" };
-  if (user.balance < entry) return { error: "Balance kam hai — pehle paise add karein" };
-
-  // Joining the lobby is final: the entry is charged now and research for this category starts now.
-  db.addTransaction(user.id, "entry", -entry, `Match entry (${categoryName(category)})`);
-
-  // Puzzles are played alone: no lobby, no opponent. The player's own Puzzle Challenge starts right away.
   if (PUZZLE_KINDS.includes(category)) {
-    startMatch({ mode: "challenge", category, entry, a: { user, socket }, b: null });
-    return { ok: true, balance: db.getUser(user.id).balance };
+    startMatch({ mode: "practice", category, a: { user, socket }, b: null });
+    return { ok: true };
   }
-  prefetch(category, QUESTIONS_PER_MATCH);
-
-  const key = `${category}:${entry}`;
-  const q = queues.get(key) || [];
+  const q = queues.get(category) || [];
   const oppIndex = q.findIndex((w) => w.userId !== user.id && w.socket.connected);
   if (oppIndex >= 0) {
     const [opp] = q.splice(oppIndex, 1);
-    startMatch({ mode: "paid", category, entry, a: { user: db.getUser(opp.userId), socket: opp.socket }, b: { user, socket }, since: opp.since });
-    return { ok: true, balance: db.getUser(user.id).balance };
+    if (!q.length) queues.delete(category);
+    clearTimeout(opp.botTimer);
+    startMatch({ mode: "free", category, a: { user: db.getUser(opp.userId), socket: opp.socket }, b: { user, socket } });
+    return { ok: true };
   }
-  const waiting = { userId: user.id, socket, since: Date.now(), category, entry };
+  const waiting = { userId: user.id, socket, since: Date.now(), category };
   q.push(waiting);
-  queues.set(key, q);
+  queues.set(category, q);
   activeByUser.set(user.id, "queue");
-  // no Puzzle Challenge above CHALLENGE_MAX_ENTRY: if nobody comes, the entry goes back
-  if (entry > CHALLENGE_MAX_ENTRY) {
-    setTimeout(() => {
-      if (!(queues.get(key) || []).includes(waiting)) return;
-      leaveQueue(user.id);
-      db.addTransaction(user.id, "refund", entry, "Muqabil nahi mila — entry wapas");
-      waiting.socket.emit("queue:cancelled", { reason: "2 minute mein muqabil nahi mila — entry wapas kar di gayi", balance: db.getUser(user.id).balance });
-    }, NO_OPPONENT_REFUND_MS);
-  }
-  return { ok: true, waiting: true, balance: db.getUser(user.id).balance };
+  waiting.botTimer = setTimeout(() => {
+    if (!(queues.get(category) || []).includes(waiting)) return;
+    leaveQueue(user.id);
+    startMatch({ mode: "practice", category, a: { user: db.getUser(user.id), socket: waiting.socket }, b: null });
+  }, OPPONENT_WAIT_SECONDS * 1000);
+  return { ok: true, waiting: true };
 }
 
 export function leaveQueue(userId) {
@@ -111,117 +94,36 @@ export function leaveQueue(userId) {
   if (activeByUser.get(userId) === "queue") activeByUser.delete(userId);
 }
 
-// There is no way back once a player is in the lobby (the AI is already working for them).
-export function cancelSearch() {
-  return { error: "Lobby mein aane ke baad match chhora nahi ja sakta" };
-}
-
-function categoryWaiting(category) {
-  for (const [key, q] of queues) if (key.startsWith(category + ":") && !key.endsWith(":free") && q.length) return true;
-  return false;
-}
-
-// Free play. A puzzle is solo practice. A quiz looks for another free player first (a free 1v1, no money); if nobody
-// comes within HOUSE_WAIT_SECONDS, the computer plays instead.
-export function startPractice(socket, user, { category }) {
-  if (!CATEGORIES.some((c) => c.id === category)) return { error: "Category nahi mili" };
-  if (activeByUser.has(user.id)) return { error: "Aap pehle se match mein hain" };
-  if (PUZZLE_KINDS.includes(category)) {
-    startMatch({ mode: "practice", category, entry: 0, a: { user, socket }, b: null });
-    return { ok: true };
-  }
-  const key = `${category}:free`;
-  const q = queues.get(key) || [];
-  const oppIndex = q.findIndex((w) => w.userId !== user.id && w.socket.connected);
-  if (oppIndex >= 0) {
-    const [opp] = q.splice(oppIndex, 1);
-    if (!q.length) queues.delete(key);
-    clearTimeout(opp.botTimer);
-    startMatch({ mode: "free", category, entry: 0, a: { user: db.getUser(opp.userId), socket: opp.socket }, b: { user, socket }, since: opp.since });
-    return { ok: true };
-  }
-  const waiting = { userId: user.id, socket, since: Date.now(), category, entry: 0, free: true };
-  q.push(waiting);
-  queues.set(key, q);
-  activeByUser.set(user.id, "queue");
-  waiting.botTimer = setTimeout(() => {
-    if (!(queues.get(key) || []).includes(waiting)) return;
-    leaveQueue(user.id);
-    startMatch({ mode: "practice", category, entry: 0, a: { user: db.getUser(user.id), socket: waiting.socket }, b: null });
-  }, HOUSE_WAIT_SECONDS * 1000);
-  return { ok: true, waiting: true };
-}
-
-// No real opponent showed up within 30s (entries up to CHALLENGE_MAX_ENTRY): a solo Puzzle Challenge.
-export function startChallenge(socket, user, { category, entry }) {
-  if (!CATEGORIES.some((c) => c.id === category)) return { error: "Category nahi mili" };
-  if (!tiersFor(category).includes(entry) || entry > CHALLENGE_MAX_ENTRY) return { error: "Is entry par Puzzle Challenge nahi hai" };
-  // only from the lobby, where the entry was already paid
-  const waiting = [...queues.values()].flat().find((w) => w.userId === user.id);
-  if (!waiting || activeByUser.get(user.id) !== "queue") return { error: "Pehle lobby mein shamil hon" };
-  leaveQueue(user.id);
-  startMatch({ mode: "challenge", category, entry, a: { user, socket }, b: null, since: waiting.since });
-  return { ok: true };
-}
-
 // ---------- match lifecycle ----------
 
-export const HOUSE_WAIT_SECONDS = 30; // how long a player searches before the app plays them itself (any entry)
-const LOBBY_MAX_MS = 60_000; // nobody waits in the lobby longer than this for the AI questions
-const BOT_SKILL = {
-  practice: { accuracy: 0.6, minMs: 2000, maxMs: 8500 },
-};
-const isPaid = (mode) => mode === "paid" || mode === "challenge";
-
-// Every puzzle match is ONE puzzle with its own time (level 1 in server/puzzles.js), played alone: the Puzzle Challenge (solved = the prize, paid
-// by the platform; not solved = the entry stays with the platform). Quiz players with nobody to play in 30s get one too.
-const puzzleMatchRound = (kind) => puzzleRound(kind, 1);
-// A puzzle category plays its own puzzle. A quiz player's fallback challenge gets a random kind, never the maze
-// (the quickest to solve, with the prize on it).
-function challengeRound(category) {
-  if (PUZZLE_KINDS.includes(category)) return puzzleMatchRound(category);
-  const kinds = PUZZLE_KINDS.filter((k) => k !== "maze");
-  return puzzleMatchRound(kinds[crypto.randomInt(kinds.length)]);
-}
-
-// since: when the first of these players entered the lobby (the 1-minute lobby limit counts from then)
-function startMatch({ mode, category, entry, a, b, since = Date.now() }) {
+function startMatch({ mode, category, a, b }) {
   const id = db.newId();
   const players = [a, b].filter(Boolean).map(({ user, socket }) => ({
     userId: user.id, name: user.name, avatar: user.avatar, socket, bot: false, score: 0, correct: 0, answers: [], strikes: 0,
   }));
-  // Puzzles are solo (challenge, or free practice of a puzzle): the "opponent" is a ghost that never plays and only
-  // wins when the puzzle isn't solved in time. Quiz practice gets the computer.
-  const solo = mode === "challenge" || PUZZLE_KINDS.includes(category);
-  if (solo) {
-    players.push({ userId: "challenge", name: "Puzzle Challenge", avatar: "bot", socket: null, bot: true, ghost: true, score: 0, correct: 0, answers: [] });
-  } else if (mode === "practice") {
-    players.push({ userId: "bot", name: "Computer", avatar: "bot", socket: null, bot: true, score: 0, correct: 0, answers: [] });
-  }
-  if (mode === "challenge") db.addHouse(entry); // the entry was charged when the player joined
+  // A puzzle is played alone: the "opponent" is a ghost that never plays and only "wins" when the puzzle isn't
+  // solved in time. A quiz without a second player gets the computer.
+  const puzzle = PUZZLE_KINDS.includes(category);
+  if (puzzle) players.push({ userId: "ghost", name: "Puzzle", avatar: "bot", socket: null, bot: true, ghost: true, score: 0, correct: 0, answers: [] });
+  else if (players.length === 1) players.push({ userId: "bot", name: "Computer", avatar: "bot", socket: null, bot: true, score: 0, correct: 0, answers: [] });
 
   // Players stay on the matchmaking screen until this match's questions are ready.
-  const m = { id, mode, category, entry, prize: isPaid(mode) ? prizeFor(entry) : 0, players, questions: [], index: -1, phase: "preparing", askedAt: 0, timer: null, done: false };
+  const m = { id, mode, category, players, questions: [], index: -1, phase: "preparing", askedAt: 0, timer: null, done: false };
   matches.set(id, m);
   for (const p of humans(m)) {
     activeByUser.set(p.userId, id);
     p.socket.join(id);
   }
-  // other players still waiting in this category get their own research started
-  if (categoryWaiting(category)) prefetch(category, QUESTIONS_PER_MATCH);
 
-  const puzzleMatch = mode === "challenge" || PUZZLE_KINDS.includes(category);
-  const want = puzzleMatch ? 1 : QUESTIONS_PER_MATCH;
-  (puzzleMatch
-    ? (mode === "challenge" ? challengeRound(category) : puzzleMatchRound(category)).then((q) => [q])
-    : questionsForMatch(category, want, since + LOBBY_MAX_MS, { free: !isPaid(mode) }))
+  const want = puzzle ? 1 : QUESTIONS_PER_MATCH;
+  (puzzle ? puzzleRound(category, 1).then((q) => [q]) : questionsForMatch(category, want, Infinity, { free: true }))
     .catch((err) => {
       console.error("[game] could not prepare questions:", err);
       return [];
     })
     .then((questions) => {
       if (m.done) return;
-      if (questions.length < want) return cancelMatch(m, "Abhi match shuru nahi ho saka — entry wapas kar di gayi");
+      if (questions.length < want) return cancelMatch(m, "Abhi match shuru nahi ho saka — thori der baad dobara try karein");
       m.questions = questions;
       m.phase = "countdown";
       for (const p of humans(m)) sendFound(m, p);
@@ -232,28 +134,23 @@ function startMatch({ mode, category, entry, a, b, since = Date.now() }) {
 function sendFound(m, p, resumed = false) {
   const opp = m.players.find((x) => x !== p);
   p.socket?.emit("match:found", {
-    matchId: m.id, mode: m.mode, category: categoryName(m.category), entry: m.entry, prize: m.prize,
+    matchId: m.id, mode: m.mode, category: categoryName(m.category),
     total: m.questions.length || QUESTIONS_PER_MATCH, seconds: SECONDS_PER_QUESTION, resumed, solo: !!opp.ghost,
     you: { name: p.name, avatar: p.avatar, score: p.score },
     opponent: { name: opp.name, avatar: opp.avatar, bot: opp.bot, score: opp.score },
-    balance: db.getUser(p.userId).balance,
   });
 }
 
-// Ends a match that never started and gives every entry back.
+// Ends a match that never finished, without a result.
 function cancelMatch(m, reason) {
   if (m.done) return;
   m.done = true;
   clearTimeout(m.timer);
-  if (isPaid(m.mode)) {
-    for (const p of humans(m)) db.addTransaction(p.userId, "refund", m.entry, "Match cancel — entry wapas");
-    if (m.mode === "challenge") db.addHouse(-m.entry);
-  }
   for (const p of humans(m)) {
     clearTimeout(p.graceTimer);
     activeByUser.delete(p.userId);
     p.socket?.leave(m.id);
-    p.socket?.emit("match:cancelled", { reason, balance: db.getUser(p.userId).balance });
+    p.socket?.emit("match:cancelled", { reason });
   }
   matches.delete(m.id);
 }
@@ -287,21 +184,11 @@ function ask(m) {
 
 function scheduleBot(m, bot) {
   const index = m.index;
-  const skill = BOT_SKILL[m.mode] ?? BOT_SKILL.practice;
-  // bot timings are tuned for a 10s question; longer puzzles stretch them
-  const scale = secondsFor(m.questions[index]) / SECONDS_PER_QUESTION;
-  const delay = (skill.minMs + Math.random() * (skill.maxMs - skill.minMs)) * scale;
   const q = m.questions[index];
-  if (q.puzzle) {
-    if (Math.random() >= skill.accuracy) return; // this round the computer doesn't finish in time
-    setTimeout(() => {
-      if (!m.done && m.index === index) score(m, bot, index, true, null);
-    }, (0.3 + Math.random() * 0.6) * secondsFor(q) * 1000);
-    return;
-  }
+  const delay = BOT_SKILL.minMs + Math.random() * (BOT_SKILL.maxMs - BOT_SKILL.minMs);
   setTimeout(() => {
     if (m.done || m.index !== index) return;
-    const right = Math.random() < skill.accuracy;
+    const right = Math.random() < BOT_SKILL.accuracy;
     const wrongChoices = [0, 1, 2, 3].filter((i) => i !== q.answerIndex);
     record(m, bot, index, right ? q.answerIndex : wrongChoices[crypto.randomInt(3)]);
   }, delay);
@@ -317,7 +204,7 @@ export function answer(userId, { matchId, index, choice }) {
 }
 
 // A puzzle solution from a player. The server checks it against the puzzle's rules; a wrong one can be fixed
-// and sent again (up to MAX_TRIES per puzzle).
+// and sent again (up to MAX_TRIES).
 const MAX_TRIES = 40;
 export function solve(userId, { matchId, index, solution }) {
   const m = matches.get(matchId);
@@ -327,7 +214,7 @@ export function solve(userId, { matchId, index, solution }) {
   const p = m.players.find((x) => x.userId === userId);
   if (!q?.puzzle || !p || p.answers[index]) return { ok: false };
   p.tries = (p.tries || 0) + 1;
-  if (p.tries > MAX_TRIES * (index + 1)) return { ok: false, error: "Bohat zyada koshishen" };
+  if (p.tries > MAX_TRIES) return { ok: false, error: "Bohat zyada koshishen" };
   let ok = false;
   try {
     ok = q.check(solution);
@@ -389,48 +276,33 @@ function reveal(m) {
   m.timer = setTimeout(() => ask(m), q.puzzle ? PUZZLE_REVEAL_MS : REVEAL_MS);
 }
 
-// opts.winner: force a winner (forfeit). opts.void: nobody wins, every entry is refunded.
+// opts.winner: force a winner (forfeit). opts.nobodyWins: both players broke the rules.
 function finish(m, opts = {}) {
   if (m.done) return;
   m.done = true;
   clearTimeout(m.timer);
   clearTimeout(m.cheatTimer);
   const [a, b] = m.players;
-  // solo puzzle: solved (any points) beats the ghost; otherwise the ghost "wins" (in a challenge the platform keeps
-  // the entry)
+  // a puzzle: solved (any points) beats the ghost
   const solo = m.players.some((p) => p.ghost);
   const byScore = solo ? (a.score > 0 ? a : b) : a.score === b.score ? null : a.score > b.score ? a : b;
-  const winner = opts.void || opts.nobodyWins ? null : opts.winner ?? byScore;
-  const patterns = new Map(humans(m).map((p) => [p, checkPatterns(m, p)]));
-  const holdReasons = winner && !winner.bot && isPaid(m.mode) ? (patterns.get(winner) || []).filter((r) => r.hold).map((r) => r.reason) : [];
-  const held = holdReasons.length > 0;
+  const winner = opts.nobodyWins ? null : opts.winner ?? byScore;
+  const outcomeFor = (p) => (opts.nobodyWins ? "loss" : !winner ? "draw" : p === winner ? "win" : "loss");
 
-  if (isPaid(m.mode)) {
-    if (winner && !winner.bot && held) {
-      const f = db.holdPrize({ userId: winner.userId, matchId: m.id, amount: m.prize, house: m.mode === "challenge", reasons: holdReasons });
-      console.warn(`[anti-cheat] prize Rs ${m.prize} held for review (${f.id}): ${winner.name} — ${holdReasons.join("; ")}`);
-    } else if (winner && !winner.bot) {
-      db.addTransaction(winner.userId, "prize", m.prize, `Match jeeta vs ${m.players.find((x) => x !== winner).name}`);
-      if (m.mode === "challenge") db.addHouse(-m.prize);
-    } else if (opts.nobodyWins) {
-      // both players broke the rules: both lose, the platform keeps the entries
-      if (m.mode === "paid") db.addForfeited(m.entry * humans(m).length);
-    } else if (!winner) {
-      const note = opts.void ? "Match void — entry wapas" : "Match draw — entry wapas";
-      for (const p of humans(m)) db.addTransaction(p.userId, "refund", m.entry, note);
-      if (m.mode === "challenge") db.addHouse(-m.entry);
-    }
+  // The leaderboard counts wins against real players and solved puzzles (not wins against the computer).
+  if (m.mode === "free") {
     for (const p of humans(m)) {
-      const outcome = opts.nobodyWins ? "loss" : !winner ? "draw" : p === winner ? "win" : "loss";
-      // a held prize counts as a win, but the earnings only change when it is released
-      db.applyResult(p.userId, outcome, p === winner ? (held ? -m.entry : m.prize - m.entry) : outcome === "loss" ? -m.entry : 0);
+      checkPatterns(m, p);
+      db.applyResult(p.userId, outcomeFor(p));
     }
+  } else if (solo && winner && !winner.bot) {
+    db.addPuzzleSolved(winner.userId);
   }
   for (const p of humans(m)) db.markSeen(p.userId, m.questions.map((q) => q.id));
 
   db.recordMatch({
-    id: m.id, mode: m.mode, category: m.category, entry: m.entry, prize: m.prize, at: Date.now(),
-    winner: winner?.userId ?? null, forfeit: opts.forfeit ?? null, void: !!opts.void,
+    id: m.id, mode: m.mode, category: m.category, at: Date.now(),
+    winner: winner?.userId ?? null, forfeit: opts.forfeit ?? null,
     players: m.players.map((p) => ({ userId: p.userId, name: p.name, score: p.score, correct: p.correct, strikes: p.strikes ?? 0 })),
   });
 
@@ -442,25 +314,18 @@ function finish(m, opts = {}) {
     p.socket.leave(m.id);
     p.socket.emit("match:end", {
       mode: m.mode,
-      outcome: opts.nobodyWins ? "loss" : !winner ? "draw" : p === winner ? "win" : "loss",
-      prize: m.prize,
-      entry: m.entry,
-      rake: RAKE,
-      held: held && p === winner,
+      outcome: outcomeFor(p),
       you: { score: p.score, correct: p.correct },
       opponent: { name: opp.name, score: opp.score, correct: opp.correct },
       total: m.questions.length,
       solo: !!opp.ghost,
-      balance: db.getUser(p.userId).balance,
       forfeit: opts.forfeit ? { by: opts.forfeit.userId === "both" ? "both" : opts.forfeit.userId === p.userId ? "you" : "opponent", reason: opts.forfeit.reason } : null,
-      void: !!opts.void,
     });
   }
   matches.delete(m.id);
 }
 
-// The player pressed Quit in a match and confirmed: they lose at once. The entry is gone; in a 1v1 the opponent wins
-// the prize, in a solo puzzle the platform keeps the entry, in practice nothing changes hands.
+// The player pressed Quit in a match and confirmed: they lose at once (in a 1v1 the opponent wins).
 export function quit(userId, { matchId }) {
   const m = matches.get(matchId);
   const p = m?.players.find((x) => x.userId === userId);
@@ -479,20 +344,14 @@ function forfeit(m, loser, reason) {
 
 // ---------- disconnects ----------
 
-// Leaving is never refunded. A dropped player gets RECONNECT_MS to come back (a refresh counts);
-// otherwise: alone in the lobby = entry forfeited, in a match = they lose and the opponent wins,
-// everyone gone = everyone loses and nobody is paid.
+// A dropped player gets RECONNECT_MS to come back (a refresh counts); otherwise: in the lobby they leave it, in a
+// match they lose and the opponent wins, everyone gone = everyone loses.
 export function handleDisconnect(userId) {
   const waiting = [...queues.values()].flat().find((w) => w.userId === userId);
   if (waiting) {
     clearTimeout(waiting.graceTimer);
     waiting.graceTimer = setTimeout(() => {
-      if (waiting.socket.connected) return;
-      leaveQueue(userId);
-      if (waiting.free) return; // a free lobby costs nothing to leave
-      db.addForfeited(waiting.entry);
-      db.flag({ type: "left-lobby", userId, reason: "left the lobby before a match started" });
-      console.log(`[game] ${userId} left the lobby — entry Rs ${waiting.entry} forfeited`);
+      if (!waiting.socket.connected) leaveQueue(userId);
     }, RECONNECT_MS);
     return;
   }
@@ -510,29 +369,28 @@ export function handleDisconnect(userId) {
   revealIfDone(m);
 }
 
-// A player who refreshed or reconnected within the grace period continues where they were.
 // The server is about to stop (Render sends SIGTERM on every deploy and before a free instance sleeps). Matches live
-// only in memory, so end every unfinished one now and give paid entries back instead of losing them.
+// only in memory, so end every unfinished one now and tell the players.
 export function shutdown(reason) {
   for (const [key, q] of queues) {
     for (const w of q) {
       activeByUser.delete(w.userId);
       clearTimeout(w.botTimer);
-      if (w.entry) db.addTransaction(w.userId, "refund", w.entry, "Server update — entry wapas");
-      w.socket.emit("queue:cancelled", { reason, balance: db.getUser(w.userId).balance });
+      w.socket.emit("queue:cancelled", { reason });
     }
     queues.delete(key);
   }
   for (const m of [...matches.values()]) if (!m.done) cancelMatch(m, reason);
 }
 
+// A player who refreshed or reconnected within the grace period continues where they were.
 // false: this player has no lobby place or match on this server (e.g. it restarted), so the client stops waiting on one
 export function rejoin(userId, socket) {
   const waiting = [...queues.values()].flat().find((w) => w.userId === userId);
   if (waiting) {
     clearTimeout(waiting.graceTimer);
     waiting.socket = socket;
-    socket.emit("queue:resume", { category: waiting.category, entry: waiting.entry, prize: prizeFor(waiting.entry), since: waiting.since, free: !!waiting.free });
+    socket.emit("queue:resume", { category: waiting.category, since: waiting.since });
     return true;
   }
   const m = matches.get(activeByUser.get(userId));
@@ -555,8 +413,8 @@ export function rejoin(userId, socket) {
 // ---------- anti-cheat ----------
 
 // Cheat signals come from the client: tab or window switch, leaving fullscreen, devtools, injected
-// extension elements. ANY detection during the match means that player loses. Signals from both
-// players within CHEAT_WINDOW_MS = both lose and nobody is paid. Every signal is logged.
+// extension elements. ANY detection during a match means that player loses. Signals from both
+// players within CHEAT_WINDOW_MS = both lose. Every signal is logged.
 const CHEAT_WINDOW_MS = 1500;
 export function strike(userId, { matchId, reason }) {
   const m = matches.get(matchId);
@@ -580,33 +438,24 @@ function resolveCheat(m) {
 const mean = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 const stdev = (xs) => Math.sqrt(mean(xs.map((x) => (x - mean(xs)) ** 2)));
 
-// Server-side pattern checks after every match. Every finding is logged as a flag. Findings marked
-// `hold` stop an automatic payout: the winner's prize waits for a manual review instead.
+// Timing checks after every 1v1 against a real player, so leaderboard wins stay honest. Findings are logged as flags.
 function checkPatterns(m, p) {
-  const answered = p.answers.filter((a) => a && !a.voided && typeof a.ms === "number");
-  if (answered.length < 6) return [];
+  const answered = p.answers.filter((a) => a && typeof a.ms === "number");
+  if (answered.length < 6) return;
   const times = answered.map((a) => a.ms);
   const correct = answered.filter((a) => a.correct);
   const reasons = [];
   // nearly all right while nearly always answering late = looking answers up somewhere else
-  const late = correct.filter((a) => a.ms > LATE_SHARE * (a.limit ?? SECONDS_PER_QUESTION * 1000)).length;
-  if (correct.length >= 8 && late >= 0.75 * correct.length)
-    reasons.push({ hold: true, reason: `late-correct: ${correct.length}/${answered.length} right, ${late} of them in the last ${Math.round((1 - LATE_SHARE) * 100)}% of the time` });
+  const late = correct.filter((a) => a.ms > 0.6 * (a.limit ?? SECONDS_PER_QUESTION * 1000)).length;
+  if (correct.length >= 8 && late >= 0.75 * correct.length) reasons.push(`late-correct: ${correct.length}/${answered.length} right, ${late} of them late`);
   const sd = stdev(times);
-  if (sd < 250) reasons.push({ hold: true, reason: `uniform-timing: answer times vary by only ${Math.round(sd)}ms` });
+  if (sd < 250) reasons.push(`uniform-timing: answer times vary by only ${Math.round(sd)}ms`);
   const fast = correct.filter((a) => a.ms < 1500).length;
-  if (fast >= 5) reasons.push({ hold: false, reason: `too-fast: ${fast} right answers in under 1.5s` });
-  const history = db.recordTiming(p.userId, mean(times));
-  if (history.length >= 3) {
-    const last = history.slice(-3);
-    if (Math.max(...last) - Math.min(...last) < 120)
-      reasons.push({ hold: true, reason: `identical-timing-across-matches: last 3 averages ${last.join("/")}ms` });
-  }
-  for (const { reason } of reasons) {
+  if (fast >= 5) reasons.push(`too-fast: ${fast} right answers in under 1.5s`);
+  for (const reason of reasons) {
     db.flag({ type: "pattern", userId: p.userId, matchId: m.id, reason });
     console.warn(`[anti-cheat] ${p.name}: ${reason}`);
   }
-  return reasons;
 }
 
 function categoryName(id) {

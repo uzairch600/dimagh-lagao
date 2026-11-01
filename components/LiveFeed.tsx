@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, Swords, Users } from "lucide-react";
-import { api, rs } from "@/lib/api";
+import { Activity, Puzzle, Swords, Trophy, Users } from "lucide-react";
+import { api } from "@/lib/api";
 import type { Config } from "@/lib/types";
 import Avatar from "./Avatar";
 
@@ -10,8 +10,9 @@ type Live = {
   online: number;
   playing: number;
   searching: number;
-  paidToday: number;
-  recent: { id: string; winner: string; avatar?: string; loser: string; prize: number; category: string; at: number }[];
+  matchesToday: number;
+  // kind "win": a 1v1 won against a real player; "puzzle": a puzzle solved in time
+  recent: { id: string; kind: "win" | "puzzle"; winner: string; avatar?: string; loser?: string; categoryName: string; at: number }[];
 };
 
 const ago = (t: number) => {
@@ -21,7 +22,7 @@ const ago = (t: number) => {
   return `${Math.floor(s / 3600)} ghante pehle`;
 };
 
-export default function LiveFeed({ config }: { config: Config }) {
+export default function LiveFeed(_: { config: Config }) {
   const [live, setLive] = useState<Live | null>(null);
 
   useEffect(() => {
@@ -32,7 +33,6 @@ export default function LiveFeed({ config }: { config: Config }) {
   }, []);
 
   if (!live) return null;
-  const catName = (id: string) => config.categories.find((c) => c.id === id)?.name ?? id;
 
   return (
     <div className="live">
@@ -54,8 +54,8 @@ export default function LiveFeed({ config }: { config: Config }) {
         </div>
         <div className="gold-stat">
           <Activity size={18} />
-          <b>{rs(live.paidToday)}</b>
-          <small>Aaj ke inaam</small>
+          <b>{live.matchesToday}</b>
+          <small>Aaj ke matches</small>
         </div>
       </div>
 
@@ -67,10 +67,10 @@ export default function LiveFeed({ config }: { config: Config }) {
               <span className="info">
                 <b>{r.winner}</b>
                 <small>
-                  {catName(r.category)} mein {r.loser} ko haraya • {ago(r.at)}
+                  {r.kind === "puzzle" ? `${r.categoryName} waqt par hal kiya` : `${r.categoryName} mein ${r.loser} ko haraya`} • {ago(r.at)}
                 </small>
               </span>
-              <span className="won">+{rs(r.prize)}</span>
+              <span className="won">{r.kind === "puzzle" ? <Puzzle size={18} /> : <Trophy size={18} />}</span>
             </div>
           ))}
         </div>

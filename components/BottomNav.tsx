@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { ArrowLeft, Gamepad2, LayoutDashboard, Trophy, User, Wallet, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Gamepad2, LayoutDashboard, Trophy, User, type LucideIcon } from "lucide-react";
 import type { Screen } from "@/lib/types";
 
 const ITEMS: { id: Screen; icon: LucideIcon; label: string }[] = [
   { id: "home", icon: LayoutDashboard, label: "Home" },
   { id: "play", icon: Gamepad2, label: "Khelein" },
-  { id: "wallet", icon: Wallet, label: "Wallet" },
   { id: "leaderboard", icon: Trophy, label: "Top" },
   { id: "profile", icon: User, label: "Profile" },
 ];

@@ -24,23 +24,14 @@ export type Puzzle =
   | { kind: "pipes"; n: number; tiles: number[]; source: number }
   | { kind: "balls"; n: number; cap: number; tubes: number[][] };
 export type PuzzleKind = Puzzle["kind"];
-export type Tier = { entry: number; prize: number };
-
+// Everything is free: no entry fees, no prizes from players.
 export type Config = {
-  demoMode: boolean;
-  paymentsOpen: boolean;
-  puzzleSeconds: Record<string, number>; // the time of a puzzle match, per puzzle kind // false until the payment gateway is connected: paid matches show "jald aa rahe hain"
   categories: Category[];
-  tiers: Tier[]; // quiz entries
-  puzzleTiers: Tier[]; // puzzle entries (smaller)
-  challengeMaxEntry: number; // Puzzle Challenge only up to this entry
-  noOpponentRefundSeconds: number; // bigger entries: refund after this long without an opponent
+  puzzleSeconds: Record<string, number>; // the time of a puzzle match, per puzzle kind
   questions: number;
   seconds: number;
-  rake: number;
   scoring: { max: number; min: number; fullMs: number };
-  minWithdraw: number;
-  houseWaitSeconds: number;
+  opponentWaitSeconds: number; // a quiz player waits this long for a real opponent, then the computer plays
   avatars: string[];
 };
 
@@ -49,52 +40,38 @@ export type User = {
   name: string;
   phone: string;
   avatar: string;
-  balance: number;
-  wins: number;
+  wins: number; // 1v1 wins against real players
   losses: number;
   draws: number;
-  earnings: number;
+  puzzles: number; // puzzles solved in time
 };
 
-export type Transaction = {
-  id: string;
-  type: "deposit" | "withdraw" | "entry" | "prize" | "refund";
-  amount: number;
-  note: string;
-  balanceAfter: number;
-  at: number;
-};
-
-export type Withdrawal = { id: string; txId: string; amount: number; method: string; account: string; status: string; at: number };
+// free: a 1v1 between two real players. practice: against the computer, or a puzzle played alone.
+export type MatchMode = "free" | "practice";
 
 export type MatchSummary = {
   id: string;
-  mode: "paid" | "challenge" | "practice" | "free"; // free: a no-money 1v1 between two players
+  mode: MatchMode;
   category: string;
-  entry: number;
-  prize: number;
   at: number;
   winner: string | null;
   players: { userId: string; name: string; score: number; correct: number }[];
 };
 
-export type LeaderRow = { id: string; name: string; avatar: string; wins: number; losses: number; earnings: number };
+export type LeaderRow = { id: string; name: string; avatar: string; wins: number; losses: number; puzzles: number };
 
 export type PlayerInfo = { name: string; avatar: string; bot?: boolean; score?: number };
 
 export type MatchFound = {
   matchId: string;
-  mode: "paid" | "challenge" | "practice" | "free"; // free: a no-money 1v1 between two players
+  mode: MatchMode;
   category: string;
-  entry: number;
-  prize: number;
   total: number;
   seconds: number;
   resumed?: boolean;
   solo?: boolean; // a puzzle played alone: there is no opponent to show
   you: PlayerInfo;
   opponent: PlayerInfo;
-  balance: number;
 };
 
 export type Question = {
@@ -115,19 +92,13 @@ export type Reveal = {
 };
 
 export type MatchEnd = {
-  mode: "paid" | "challenge" | "practice" | "free"; // free: a no-money 1v1 between two players
+  mode: MatchMode;
   outcome: "win" | "loss" | "draw";
-  prize: number;
-  entry: number;
-  rake?: number;
-  held?: boolean;
   you: { score: number; correct: number };
   opponent: { name: string; score: number; correct: number };
   total: number;
   solo?: boolean;
-  balance: number;
   forfeit?: { by: "you" | "opponent" | "both"; reason: string } | null;
-  void?: boolean;
 };
 
-export type Screen = "login" | "home" | "play" | "searching" | "versus" | "match" | "result" | "wallet" | "leaderboard" | "profile";
+export type Screen = "login" | "home" | "play" | "searching" | "versus" | "match" | "result" | "leaderboard" | "profile";

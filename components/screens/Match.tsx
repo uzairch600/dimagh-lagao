@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Check, LogOut, TriangleAlert } from "lucide-react";
-import { rs } from "@/lib/api";
 import { sfx } from "@/lib/sound";
 import type { MatchState } from "../GameApp";
 import Avatar from "../Avatar";
@@ -40,13 +39,9 @@ export default function Match({ state, onAnswer, onSolve, onQuit }: Props) {
   // cheating, so it is an in-app sheet)
   const [quitting, setQuitting] = useState(false);
   const loses =
-    found.mode === "practice"
-      ? "Practice match khatam ho jayega. Koi paisa nahi katega."
-      : found.mode === "free"
-        ? "Free match khatam ho jayega aur muqabil jeet jayega. Koi paisa nahi katega."
-      : found.solo
-        ? `Aap ki ${rs(found.entry)} entry wapas nahi milegi aur ye match haar jayenge.`
-        : `Aap ki ${rs(found.entry)} entry wapas nahi milegi, aap haar jayenge aur ${rs(found.prize)} ka inaam muqabil ko mil jayega.`;
+    found.mode === "free"
+      ? "Match khatam ho jayega aur muqabil jeet jayega. Leaderboard par ye haar ginegi."
+      : "Ye match khatam ho jayega.";
 
   const low = left <= 3 && !reveal;
   const myPoints = reveal?.you.points ?? 0;
@@ -104,11 +99,11 @@ export default function Match({ state, onAnswer, onSolve, onQuit }: Props) {
         </div>
 
         {found.solo ? (
-          // a puzzle played alone: the prize in place of an opponent
+          // a puzzle played alone: the clock is the only opponent
           <div className="pscore opp">
             <div>
-              <small>{found.mode === "practice" ? "Practice" : "Inaam"}</small>
-              <b>{found.mode === "practice" ? "Free" : rs(found.prize)}</b>
+              <small>Akele</small>
+              <b>Puzzle</b>
             </div>
           </div>
         ) : (
@@ -137,7 +132,7 @@ export default function Match({ state, onAnswer, onSolve, onQuit }: Props) {
       ) : q.puzzle ? (
         <>
           <p className="q-count pz-count">
-            {found.solo ? `Puzzle Challenge • ${q.seconds} second` : `Puzzle ${q.index + 1}/${q.total}`}
+            {found.solo ? `Puzzle • ${q.seconds} second` : `Puzzle ${q.index + 1}/${q.total}`}
             {oppAnswered && !reveal && <span className="opp-done"> • Muqabil ne hal kar liya!</span>}
           </p>
           <PuzzleRound key={q.index} puzzle={q.puzzle} solved={myChoice !== null} solution={reveal?.solution} onSolve={onSolve} />

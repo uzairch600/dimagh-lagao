@@ -3,13 +3,12 @@ export const SITE = {
   name: "Dimagh Lagao",
   domain: "dimaghlagao.com",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://dimaghlagao.com",
-  tagline: "Dimagh lagao, inaam jeeto",
+  tagline: "Dimagh lagao, champion bano",
   email: "muhammaduzair.web@gmail.com", // switch to support@dimaghlagao.com once that mailbox exists
   whatsapp: "", // e.g. "+92 300 0000000" — leave empty to hide
   city: "Pakistan",
   minAge: 18,
-  platformFeePercent: 30,
-  updated: "31 October 2026",
+  updated: "1 November 2026",
 };
 
 // The game and live data need the Node server (server.js). On static hosting such as Vercel,
@@ -48,8 +47,7 @@ export const FOOTER = [
     links: [
       { href: "/terms", label: "Terms & Conditions" },
       { href: "/privacy", label: "Privacy Policy" },
-      { href: "/refund-policy", label: "Refund Policy" },
-      { href: "/fair-play", label: "Fair Play & Responsible Gaming" },
+      { href: "/fair-play", label: "Fair Play" },
     ],
   },
 ];

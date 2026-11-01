@@ -7,9 +7,9 @@ const poppins = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
-  title: { default: `${SITE.name} — 1v1 quiz muqabla, inaam jeeto`, template: `%s | ${SITE.name}` },
+  title: { default: `${SITE.name} — free 1v1 quiz aur puzzle muqabla`, template: `%s | ${SITE.name}` },
   description:
-    "Pakistan ka 1v1 skill quiz game. Asli players ke saath live muqabla karein — Pakistan GK, cricket, science, math — aur sahi aur tez jawab de kar inaam jeetein.",
+    "Pakistan ka 1v1 skill quiz game. Asli players ke saath live muqabla karein — Pakistan GK, cricket, science, math — aur 20 dimaghi puzzles. Bilkul free.",
   openGraph: {
     siteName: SITE.name,
     type: "website",

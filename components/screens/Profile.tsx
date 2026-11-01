@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, rs } from "@/lib/api";
+import { api } from "@/lib/api";
 import { Check, Handshake, LogOut, Pencil, Trophy, X } from "lucide-react";
 import type { Config, MatchSummary, User } from "@/lib/types";
 import Avatar, { ANIMALS, AnimalArt } from "../Avatar";
@@ -60,7 +60,7 @@ export default function Profile({ user, config, setUser, notify, onLogout }: Pro
           <div><b>{user.wins}</b><small>Jeet</small></div>
           <div><b>{user.losses}</b><small>Haar</small></div>
           <div><b>{rate}%</b><small>Win rate</small></div>
-          <div><b className={user.earnings >= 0 ? "gold" : ""}>{user.earnings}</b><small>Kamai</small></div>
+          <div><b className="gold">{user.puzzles}</b><small>Puzzle hal</small></div>
         </div>
       </div>
 
@@ -104,14 +104,9 @@ export default function Profile({ user, config, setUser, notify, onLogout }: Pro
                 <b>vs {opp?.name}</b>
                 <small>
                   {cat?.name} • {me?.score} – {opp?.score}
-                  {m.mode === "practice" ? " • practice" : m.mode === "free" ? " • free" : ""}
+                  {m.mode === "practice" ? " • practice" : " • 1v1"}
                 </small>
               </span>
-              {m.mode !== "practice" && m.mode !== "free" && (
-                <span className={`amt ${outcome === "win" ? "plus" : outcome === "loss" ? "minus" : ""}`}>
-                  {outcome === "win" ? `+${rs(m.prize)}` : outcome === "loss" ? `−${rs(m.entry)}` : "±0"}
-                </span>
-              )}
             </div>
           );
         })}

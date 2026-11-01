@@ -27,12 +27,12 @@ export default function PuzzleSection({ puzzles, seconds, onPick }: { puzzles: C
     <>
       <div className="pz-banner card">
         <div className="pz-banner-copy">
-          <span className="tag">{list.length} PUZZLES · SOLO CHALLENGE</span>
+          <span className="tag">{list.length} PUZZLES · BILKUL FREE</span>
           <h2>
             <Timer size={26} /> Dimagh ki Race
           </h2>
           <p>
-            Aap aur ghari, koi muqabil nahi. <b>Ghari se tez puzzle hal karein, inaam jeetein.</b> {list.length} qisam ke puzzle.
+            Aap aur ghari, koi muqabil nahi. <b>Ghari se tez puzzle hal karein, leaderboard par chhaa jayein.</b> {list.length} qisam ke puzzle.
           </p>
           <div className="pz-banner-chips">
             <span className="pz-banner-chip">

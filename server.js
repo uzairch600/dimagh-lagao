@@ -29,13 +29,13 @@ server.on("upgrade", (req, socket, head) => {
 });
 
 // Render sends SIGTERM before every deploy and before a free instance sleeps. Live matches exist only in memory, so
-// end them (paid entries refunded), save what is pending, then exit.
+// end them (players are told), save what is pending, then exit.
 let stopping = false;
 async function stop(signal) {
   if (stopping) return;
   stopping = true;
   console.log(`[server] ${signal}: ending live matches and saving before exit`);
-  game.shutdown("Server update ho raha hai — match band kar diya. Paid entry thi to wallet mein wapas aa gayi.");
+  game.shutdown("Server update ho raha hai — match band kar diya. Thori der mein dobara khelein.");
   await store.flush();
   setTimeout(() => process.exit(0), 500); // let the last socket messages go out
 }

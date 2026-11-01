@@ -11,12 +11,10 @@ import Toast, { type ToastState } from "./Toast";
 import Login from "./screens/Login";
 import Home from "./screens/Home";
 import Play from "./screens/Play";
-import PlaySheet from "./screens/PlaySheet";
 import Searching from "./screens/Searching";
 import Versus from "./screens/Versus";
 import Match from "./screens/Match";
 import Result from "./screens/Result";
-import Wallet from "./screens/Wallet";
 import Leaderboard from "./screens/Leaderboard";
 import Profile from "./screens/Profile";
 import RulesSheet from "./screens/RulesSheet";
@@ -32,9 +30,7 @@ export type MatchState = {
   scores: { you: number; opp: number };
 };
 
-type LastPlay = { category: Category; entry: number | null }; // entry null = practice
-
-const NAV_SCREENS: Screen[] = ["home", "play", "wallet", "leaderboard", "profile"];
+const NAV_SCREENS: Screen[] = ["home", "play", "leaderboard", "profile"];
 
 export default function GameApp() {
   const [booting, setBooting] = useState(true);
@@ -43,10 +39,10 @@ export default function GameApp() {
   const [screen, setScreen] = useState<Screen>("login");
   const [sheet, setSheet] = useState<React.ReactNode>(null);
   const [toast, setToastState] = useState<ToastState>(null);
-  const [searching, setSearching] = useState<{ category: Category; entry: number; prize: number; since: number; practice?: boolean } | null>(null);
+  const [searching, setSearching] = useState<{ category: Category; since: number } | null>(null);
   const [match, setMatch] = useState<MatchState | null>(null);
   const [end, setEnd] = useState<MatchEnd | null>(null);
-  const [lastPlay, setLastPlay] = useState<LastPlay | null>(null);
+  const [lastPlay, setLastPlay] = useState<Category | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -74,7 +70,7 @@ export default function GameApp() {
     setMatch(null);
     setSearching(null);
     setScreen("home");
-    notify("Connection toot gaya aur ye match khatam ho gaya. Paid entry thi to Wallet mein dekh lein.", "error");
+    notify("Connection toot gaya aur ye match khatam ho gaya. Dobara khelein.", "error");
     refreshMe().catch(() => {});
   }, [notify, refreshMe]);
 
@@ -101,7 +97,6 @@ export default function GameApp() {
       setSearching(null);
       setEnd(null);
       setSheet(null);
-      setUser((u) => (u ? { ...u, balance: f.balance } : u));
       setMatch({
         found: f, question: null, reveal: null, myChoice: null, oppAnswered: false, results: [],
         scores: { you: f.you.score ?? 0, opp: f.opponent.score ?? 0 },
@@ -109,10 +104,9 @@ export default function GameApp() {
       setScreen(f.resumed ? "match" : "versus");
     });
 
-    s.on("match:cancelled", ({ reason, balance }: { reason: string; balance: number }) => {
+    s.on("match:cancelled", ({ reason }: { reason: string }) => {
       clearTimeout(deadTimer.current);
       setMatch(null);
-      setUser((u) => (u ? { ...u, balance } : u));
       setScreen("play");
       notify(reason, "error");
     });
@@ -152,11 +146,11 @@ export default function GameApp() {
     });
 
     // back in the lobby after a refresh or reconnect
-    s.on("queue:resume", (q: { category: string; entry: number; prize: number; since: number; free?: boolean }) => {
+    s.on("queue:resume", (q: { category: string; since: number }) => {
       setConfig((cfg) => {
         const category = cfg?.categories.find((c) => c.id === q.category);
         if (category) {
-          setSearching({ category, entry: q.entry, prize: q.prize, since: q.since, practice: q.free });
+          setSearching({ category, since: q.since });
           setScreen("searching");
         }
         return cfg;
@@ -166,8 +160,7 @@ export default function GameApp() {
     s.on("match:opponentLeft", ({ seconds }: { seconds: number }) => notify(`Muqabil ka connection gaya — ${seconds} second mein wapas na aaya to aap jeet jayenge`));
     s.on("match:opponentBack", () => notify("Muqabil wapas aa gaya"));
 
-    s.on("queue:cancelled", ({ reason, balance }: { reason: string; balance?: number }) => {
-      if (typeof balance === "number") setUser((u) => (u ? { ...u, balance } : u));
+    s.on("queue:cancelled", ({ reason }: { reason: string }) => {
       setSearching(null);
       setScreen("home");
       notify(reason, "error");
@@ -210,32 +203,22 @@ export default function GameApp() {
     window.scrollTo({ top: 0 });
   };
 
-  const joinQueue = (category: Category, entry: number) => {
-    const tier = [...config!.tiers, ...config!.puzzleTiers].find((t) => t.entry === entry)!;
-    setLastPlay({ category, entry });
-    socketRef.current?.emit("queue:join", { category: category.id, entry }, (res: { error?: string; balance?: number }) => {
+  // A quiz looks for a real opponent (the computer after a wait); a puzzle starts right away, played alone.
+  const startPlay = (category: Category) => {
+    setLastPlay(category);
+    socketRef.current?.emit("play:start", { category: category.id }, (res: { error?: string }) => {
       if (res?.error) return notify(res.error, "error");
       setSheet(null);
-      if (typeof res.balance === "number") setUser((u) => (u ? { ...u, balance: res.balance! } : u));
-      setSearching({ category, entry, prize: tier.prize, since: Date.now() });
+      setSearching({ category, since: Date.now() });
       setScreen("searching");
     });
   };
 
-  const startPractice = (category: Category) => {
-    setLastPlay({ category, entry: null });
-    socketRef.current?.emit("practice:start", { category: category.id }, (res: { error?: string }) => {
-      if (res?.error) return notify(res.error, "error");
-      setSheet(null);
-      setSearching({ category, entry: 0, prize: 0, since: Date.now(), practice: true });
-      setScreen("searching");
-    });
-  };
-
-  const startChallenge = () => {
-    if (!searching) return;
-    socketRef.current?.emit("challenge:start", { category: searching.category.id, entry: searching.entry }, (res: { error?: string }) => {
-      if (res?.error) notify(res.error, "error");
+  // stepping out of the lobby before a match starts (it is free, so nothing is lost)
+  const leaveLobby = () => {
+    socketRef.current?.emit("queue:leave", {}, () => {
+      setSearching(null);
+      go("play");
     });
   };
 
@@ -272,45 +255,23 @@ export default function GameApp() {
 
   const playAgain = () => {
     if (!lastPlay) return go("home");
-    showRules(lastPlay.category, lastPlay.entry);
+    showRules(lastPlay);
   };
 
   // Every match starts from the rules screen; the player must tick "I agree".
-  const showRules = (category: Category, entry: number | null) => {
-    const prize = entry ? [...config!.tiers, ...config!.puzzleTiers].find((t) => t.entry === entry)?.prize ?? 0 : 0;
+  const showRules = (category: Category) => {
+    sfx.tap();
     setSheet(
       <RulesSheet
         categoryId={category.id}
         categoryName={category.name}
-        entry={entry}
-        prize={prize}
         seconds={category.group === "puzzle" ? config!.puzzleSeconds[category.id] : config!.seconds}
-        rake={config!.rake}
-        challengeMaxEntry={config!.challengeMaxEntry}
-        refundSeconds={config!.noOpponentRefundSeconds}
+        opponentWaitSeconds={config!.opponentWaitSeconds}
         scoring={config!.scoring}
-        onBack={() => openPlaySheet(category)}
+        onBack={() => setSheet(null)}
         onStart={() => {
           enterFullscreen();
-          if (entry === null) startPractice(category);
-          else joinQueue(category, entry);
-        }}
-      />,
-    );
-  };
-
-  const openPlaySheet = (category: Category) => {
-    sfx.tap();
-    setSheet(
-      <PlaySheet
-        category={category}
-        config={config!}
-        balance={user!.balance}
-        onPlay={(entry) => showRules(category, entry)}
-        onPractice={() => showRules(category, null)}
-        onAddMoney={() => {
-          setSheet(null);
-          go("wallet");
+          startPlay(category);
         }}
       />,
     );
@@ -335,20 +296,13 @@ export default function GameApp() {
         {user && config && (
           <>
             {screen === "home" && <Home user={user} config={config} go={go} />}
-            {screen === "play" && <Play config={config} onPick={openPlaySheet} />}
+            {screen === "play" && <Play config={config} onPick={showRules} />}
             {screen === "searching" && searching && (
-              <Searching
-                info={searching} name={user.name} avatar={user.avatar}
-                houseWaitSeconds={config.houseWaitSeconds}
-                challengeMaxEntry={config.challengeMaxEntry}
-                refundSeconds={config.noOpponentRefundSeconds}
-                onStartChallenge={startChallenge}
-              />
+              <Searching info={searching} name={user.name} avatar={user.avatar} waitSeconds={config.opponentWaitSeconds} onLeave={leaveLobby} />
             )}
             {screen === "versus" && match && <Versus found={match.found} />}
             {screen === "match" && match && <Match state={match} onAnswer={answer} onSolve={solve} onQuit={quit} />}
             {screen === "result" && end && <Result end={end} user={user} found={match?.found ?? null} onAgain={playAgain} onHome={() => go("home")} />}
-            {screen === "wallet" && <Wallet user={user} config={config} setSheet={setSheet} notify={notify} refreshMe={refreshMe} />}
             {screen === "leaderboard" && <Leaderboard me={user} />}
             {screen === "profile" && <Profile user={user} config={config} setUser={setUser} notify={notify} onLogout={logout} />}
           </>

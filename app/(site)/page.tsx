@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, Bot, Clock, Lock, ShieldCheck, Smartphone, Swords, Trophy, Users, Wallet } from "lucide-react";
+import { ArrowRight, BadgeCheck, Clock, Gift, Lock, Puzzle, ShieldCheck, Smartphone, Swords, Trophy, Users } from "lucide-react";
 import { LiveStrip, WinnersList } from "@/components/site/Live";
 import CategoryIcon from "@/components/CategoryIcon";
-import { SITE } from "@/lib/site";
 
 const CATEGORIES = [
   { id: "world", name: "World GK", desc: "Pakistan aur duniya" },
@@ -20,16 +19,16 @@ const CATEGORIES = [
 
 const STEPS = [
   { icon: Smartphone, title: "Account banayein", text: "Sirf mobile number aur 4-digit PIN. 30 second ka kaam." },
-  { icon: Wallet, title: "Category aur entry chunein", text: "Quiz Rs 20 se Rs 1000 tak, puzzles Rs 100 tak. Jitni entry, utna bada inaam." },
-  { icon: Swords, title: "Live 1v1 muqabla", text: "Dono players ko same 10 sawal. Jitna tez sahi jawab, utne zyada points." },
-  { icon: Trophy, title: "Inaam jeetein", text: "Jeetne wale ko poora inaam foran wallet mein." },
+  { icon: Swords, title: "Category chunein", text: "7 quiz categories aur 20 puzzles — sab bilkul free. Koi entry fee nahi." },
+  { icon: Users, title: "Live 1v1 muqabla", text: "Asli player ke saath same 10 sawal. Jitna tez sahi jawab, utne zyada points." },
+  { icon: Trophy, title: "Champion banein", text: "Har jeet aur har hal kiya puzzle leaderboard par ginta hai." },
 ];
 
 const FEATURES = [
-  { icon: Users, title: "Asli players", text: "Aap ka muqabla asli logon se hota hai. Agar 30 second mein koi na mile, to app khud aap ke saath khelti hai — saaf likh kar." },
+  { icon: Users, title: "Asli players", text: "Aap ka muqabla asli logon se hota hai. 30 second mein koi na mile, to computer aap ke saath khelta hai — saaf likh kar." },
   { icon: Clock, title: "Server ki ghari", text: "Waqt aur sahi jawab hamare server par rehte hain — koi cheat nahi kar sakta." },
-  { icon: Lock, title: "Mehfooz account", text: "PIN encrypted rehta hai, aur har paisa wallet history mein dikhta hai." },
-  { icon: ShieldCheck, title: "Saaf hisaab", text: `Platform fee ${SITE.platformFeePercent}%, har match se pehle saaf likhi hui. Baqi ${100 - SITE.platformFeePercent}% jeetne wale ka.` },
+  { icon: Lock, title: "Mehfooz account", text: "PIN encrypted rehta hai. Aap ka number kisi ke saath share nahi hota." },
+  { icon: ShieldCheck, title: "Koi jua nahi", text: "Khelna bilkul free hai. Aap ka ek paisa bhi daao par nahi lagta — sirf dimagh." },
 ];
 
 export default function Landing() {
@@ -40,16 +39,16 @@ export default function Landing() {
         <div className="site-container hero-grid">
           <div className="hero-copy">
             <span className="pill">
-              <span className="live-dot" /> Pakistan ka live 1v1 quiz muqabla
+              <span className="live-dot" /> Pakistan ka free 1v1 quiz muqabla
             </span>
             <h1>
               Dimagh lagao,
               <br />
-              <span className="grad-gold">inaam jeeto.</span>
+              <span className="grad-gold">champion bano.</span>
             </h1>
             <p className="lead">
-              Asli players ke saath live quiz battle. Pakistan aur duniya ki GK, cricket, science, IT, AI, entertainment, aur 20 solo puzzles — jo sahi aur sab se tez jawab de,
-              wohi jeete. <b>Rs 1,400 tak</b> ek match mein.
+              Asli players ke saath live quiz battle. Pakistan aur duniya ki GK, cricket, science, IT, AI, entertainment, aur 20 dimaghi
+              puzzles — jo sahi aur sab se tez jawab de, wohi jeete. <b>Bilkul free.</b>
             </p>
             <div className="hero-ctas">
               <Link href="/play" className="btn btn-gold btn-lg">
@@ -70,10 +69,10 @@ export default function Landing() {
           <div className="hero-visual" aria-hidden="true">
             <img className="hero-art-img" src="/images/hero.webp" alt="" width={1408} height={768} />
             <div className="float-card fc1">
-              <Trophy size={18} /> <span><b>+Rs 70</b> jeeta</span>
+              <Trophy size={18} /> <span><b>+1 jeet</b> leaderboard par</span>
             </div>
             <div className="float-card fc2">
-              <Bot size={18} /> <span>30s mein player na mile to <b>Puzzle Challenge</b></span>
+              <Puzzle size={18} /> <span><b>20 puzzles</b> — har ek ka live demo</span>
             </div>
           </div>
         </div>
@@ -119,22 +118,30 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* PRIZES */}
+      {/* SPONSORS */}
       <section className="site-section">
         <div className="site-container prize-band">
           <div>
-            <p className="eyebrow">Inaam</p>
-            <h2>Entry chhoti, inaam bada</h2>
-            <p className="muted">Dono players ki entry milkar pot banti hai. {100 - SITE.platformFeePercent}% jeetne wale ka.</p>
+            <p className="eyebrow">Sponsor muqable — jald aa rahe hain</p>
+            <h2>Aap free khelein, inaam sponsor de</h2>
+            <p className="muted">
+              Brands aur sponsors apne muqable karwayenge aur inaam khud denge. Players se koi entry fee nahi — sab se behtar khelne wala
+              inaam ka haqdar.
+            </p>
           </div>
           <div className="prize-table">
-            {[20, 50, 100, 500, 1000].map((e) => (
-              <div key={e} className={`prize-row ${e === 50 ? "hot" : ""}`}>
-                <span>Entry <b>Rs {e}</b></span>
-                <ArrowRight size={18} />
-                <span className="gold">Jeeto <b>Rs {Math.round(e * 2 * (1 - SITE.platformFeePercent / 100))}</b></span>
-              </div>
-            ))}
+            <div className="prize-row">
+              <span><Gift size={18} /> <b>Inaam sponsor ki taraf se</b></span>
+            </div>
+            <div className="prize-row">
+              <span><BadgeCheck size={18} /> <b>Players ke liye bilkul free</b></span>
+            </div>
+            <div className="prize-row hot">
+              <span className="gold"><Trophy size={18} /> <b>Behtareen player jeetega</b></span>
+            </div>
+            <Link href="/contact" className="text-link">
+              Sponsor banna hai? Rabta karein <ArrowRight size={16} />
+            </Link>
           </div>
         </div>
       </section>
@@ -144,7 +151,7 @@ export default function Landing() {
         <div className="site-container">
           <div className="section-title">
             <p className="eyebrow">Kyun Dimagh Lagao?</p>
-            <h2>Imaandar muqabla, saaf hisaab</h2>
+            <h2>Imaandar muqabla, sirf dimagh ka khel</h2>
           </div>
           <div className="features">
             {FEATURES.map(({ icon: Icon, title, text }) => (
@@ -163,11 +170,11 @@ export default function Landing() {
         <div className="site-container">
           <div className="section-title row">
             <div>
-              <p className="eyebrow">Live winners</p>
+              <p className="eyebrow">Live nateeje</p>
               <h2>Abhi abhi kisne jeeta</h2>
             </div>
             <Link href="/winners" className="text-link">
-              Sab winners <ArrowRight size={16} />
+              Sab nateeje <ArrowRight size={16} />
             </Link>
           </div>
           <WinnersList limit={6} />
@@ -180,7 +187,7 @@ export default function Landing() {
           <div className="cta-band">
             <div className="cta-copy">
               <h2>Aap ka dimagh kitna tez hai?</h2>
-              <p>Free practice se shuru karein, phir asli muqabla khelein.</p>
+              <p>Free account banayein aur pehla muqabla abhi khelein.</p>
               <Link href="/play" className="btn btn-gold btn-lg">
                 Abhi khelein <ArrowRight size={20} />
               </Link>

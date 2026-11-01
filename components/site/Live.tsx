@@ -2,8 +2,8 @@
 
 // Live data widgets for the public website. Everything shown here comes from real matches.
 import { useEffect, useState } from "react";
-import { Activity, Swords, Trophy, Users } from "lucide-react";
-import { api, rs } from "@/lib/api";
+import { Activity, Puzzle, Swords, Trophy, Users } from "lucide-react";
+import { api } from "@/lib/api";
 import { GAME_LIVE } from "@/lib/site";
 import type { LeaderRow } from "@/lib/types";
 import Avatar from "../Avatar";
@@ -12,13 +12,9 @@ type Live = {
   online: number;
   playing: number;
   searching: number;
-  paidToday: number;
-  recent: { id: string; winner: string; avatar?: string; loser: string; prize: number; category: string; at: number }[];
-};
-
-const CATEGORY: Record<string, string> = {
-  pakistan: "Pakistan GK", world: "World GK", cricket: "Cricket", science: "Science", math: "Math Speed",
-  it: "IT & Computers", ai: "AI", entertainment: "Entertainment",
+  matchesToday: number;
+  // kind "win": a 1v1 won against a real player; "puzzle": a puzzle solved in time
+  recent: { id: string; kind: "win" | "puzzle"; winner: string; avatar?: string; loser?: string; categoryName: string; at: number }[];
 };
 
 const ago = (t: number) => {
@@ -56,7 +52,7 @@ export function LiveStrip({ hero = false }: { hero?: boolean }) {
   const items = [
     { icon: Users, value: live ? String(live.online) : "—", label: "Abhi online" },
     { icon: Swords, value: live ? String(live.playing) : "—", label: "Match khel rahe hain" },
-    { icon: Activity, value: live ? rs(live.paidToday) : "—", label: "Aaj ke inaam" },
+    { icon: Activity, value: live ? String(live.matchesToday) : "—", label: "Aaj ke matches" },
   ];
   return (
     <div className={`live-strip ${hero ? "hero-live" : ""}`}>
@@ -82,7 +78,7 @@ export function WinnersList({ limit = 12 }: { limit?: number }) {
     return (
       <div className="site-empty">
         <Trophy size={32} />
-        <p>Abhi tak koi winner nahi — pehla inaam aap ka ho sakta hai!</p>
+        <p>Abhi tak koi winner nahi — pehli jeet aap ki ho sakti hai!</p>
       </div>
     );
   return (
@@ -93,10 +89,10 @@ export function WinnersList({ limit = 12 }: { limit?: number }) {
           <div className="info">
             <b>{r.winner}</b>
             <small>
-              {CATEGORY[r.category] ?? r.category} • {r.loser} ko haraya • {ago(r.at)}
+              {r.kind === "puzzle" ? `${r.categoryName} waqt par hal kiya` : `${r.categoryName} • ${r.loser} ko haraya`} • {ago(r.at)}
             </small>
           </div>
-          <span className="won">+{rs(r.prize)}</span>
+          <span className="won">{r.kind === "puzzle" ? <Puzzle size={20} /> : <Trophy size={20} />}</span>
         </div>
       ))}
     </div>
@@ -127,7 +123,7 @@ export function LeaderboardTable() {
         <span>Player</span>
         <span>Jeet</span>
         <span>Haar</span>
-        <span>Kamai</span>
+        <span>Puzzle</span>
       </div>
       {rows.map((p, i) => (
         <div key={p.id} className={`lb-line ${i < 3 ? `top${i + 1}` : ""}`}>
@@ -138,7 +134,7 @@ export function LeaderboardTable() {
           </span>
           <span>{p.wins}</span>
           <span>{p.losses}</span>
-          <span className="earn">{rs(p.earnings)}</span>
+          <span className="earn">{p.puzzles}</span>
         </div>
       ))}
     </div>

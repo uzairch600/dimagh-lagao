@@ -11,9 +11,8 @@ export const PUZZLES_PER_MATCH = 3;
 
 // In the order they appear on the Khelein screen (easiest to pick up first).
 // demo: a tiny board for the "how to play" walkthrough.
-// levels: [easier, MATCH, harder]. A match is one board at level 1, with level 1's own time. A solo challenge pays
-// 1.4x the entry, so the platform only breaks even while fewer than ~71% of players solve in time: level-1 times are
-// kept tight (35-90 s). Tune them with real solve rates once paid matches run.
+// levels: [easier, MATCH, harder]. A match is one board at level 1, with level 1's own time (35-90 s, kept tight so
+// solving one in time means something on the leaderboard).
 const PUZZLES = [
   { id: "crowns", name: "Taaj", urdu: "تاج", demo: () => G.crowns(5),
     levels: [[() => G.crowns(6), 90], [() => G.crowns(7), 70], [() => G.crowns(7), 90]] },

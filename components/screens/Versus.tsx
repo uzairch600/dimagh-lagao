@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { rs } from "@/lib/api";
 import { sfx } from "@/lib/sound";
 import type { MatchFound } from "@/lib/types";
 import Avatar from "../Avatar";
@@ -28,9 +27,9 @@ export default function Versus({ found }: { found: MatchFound }) {
           </div>
         </div>
         <div className="vs-info">
-          <p className="eyebrow">{found.category} • Puzzle Challenge</p>
+          <p className="eyebrow">{found.category} • Puzzle</p>
           <div className="vs-prize">
-            {found.mode === "practice" ? "Practice — free, koi inaam nahi" : `Waqt par hal karein — inaam ${rs(found.prize)}`}
+            Waqt khatam hone se pehle hal karein
           </div>
           <div className="countdown" key={n}>
             {n}
@@ -54,7 +53,7 @@ export default function Versus({ found }: { found: MatchFound }) {
       </div>
       <div className="vs-info">
         <p className="eyebrow">{found.category}</p>
-        <div className="vs-prize">{found.mode === "free" ? "Free match — koi paisa nahi" : found.mode === "practice" ? "Practice match — free" : `Inaam: ${rs(found.prize)}`}</div>
+        <div className="vs-prize">{found.mode === "free" ? "Live 1v1 — asli muqabla" : "Computer ke saath match"}</div>
         <div className="countdown" key={n}>
           {n}
         </div>

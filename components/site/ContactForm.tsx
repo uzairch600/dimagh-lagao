@@ -66,7 +66,7 @@ export default function ContactForm() {
         <span>Mauzu</span>
         <select value={form.topic} onChange={set("topic")}>
           <option value="general">Aam sawal</option>
-          <option value="payment">Deposit / withdraw</option>
+          <option value="sponsor">Sponsor banna hai</option>
           <option value="match">Match ya sawal mein ghalti</option>
           <option value="account">Account</option>
           <option value="business">Business / partnership</option>

@@ -40,7 +40,7 @@ export default function Login({ onLoggedIn, notify }: Props) {
         <h1>
           Dimagh <span>Lagao</span>
         </h1>
-        <p className="tagline">Dimagh lagao, inaam jeeto</p>
+        <p className="tagline">Dimagh lagao, champion bano</p>
       </div>
 
       <form className="card glass login-card" onSubmit={submit}>
@@ -58,8 +58,8 @@ export default function Login({ onLoggedIn, notify }: Props) {
           <p className="number-warn">
             <TriangleAlert size={18} />
             <span>
-              <b>Sirf apna wohi number likhein jis par aap ka Easypaisa ya JazzCash account bana hai.</b> Jeete hue paise sirf isi
-              number par bheje jayenge — kisi aur ka number diya to verification ke waqt aap ke paise us ke account mein chale jayenge.
+              <b>Sirf apna wohi number likhein jis par aap ka Easypaisa ya JazzCash account bana hai.</b> Sponsor ke muqablon ka inaam
+              sirf isi number par bheja jayega — kisi aur ka number diya to aap ka inaam us ke paas chala jayega.
             </span>
           </p>
         )}
