@@ -5,6 +5,7 @@ import { Server } from "socket.io";
 import * as db from "./db.js";
 import * as game from "./game.js";
 import { CATEGORIES, aiStatus, poolStats, warmUp } from "./questions.js";
+import { PUZZLE_SECONDS } from "./puzzles.js";
 
 // Demo mode: "Add money" just credits the wallet so the game can be tested without a payment gateway.
 const DEMO_MODE = process.env.DEMO_MODE !== "false";
@@ -67,6 +68,7 @@ function auth(req, res, next) {
 }
 
 const config = () => ({
+  puzzleSeconds: PUZZLE_SECONDS,
   demoMode: DEMO_MODE,
   paymentsOpen: PAYMENTS_OPEN,
   categories: CATEGORIES,

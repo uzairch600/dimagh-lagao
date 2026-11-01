@@ -39,7 +39,7 @@ export default function RulesSheet({ categoryId, categoryName, entry, prize, sec
           en: entry ? "No leaving after Start. Leave the lobby or match and you lose the entry; the opponent wins." : "No leaving after Start. Leaving counts as a loss.",
         },
     puzzle
-      ? { icon: Timer, ur: "1 puzzle, 100 second. Koi muqabil nahi — sirf aap aur ghari.", en: "One puzzle, 100 seconds. No opponent: just you against the clock." }
+      ? { icon: Timer, ur: `1 puzzle, ${seconds} second. Koi muqabil nahi — sirf aap aur ghari.`, en: `One puzzle, ${seconds} seconds. No opponent: just you against the clock.` }
       : { icon: Timer, ur: `Har sawal ke liye sirf ${seconds} second.`, en: `${seconds} seconds per question.` },
     puzzle
       ? {
@@ -62,8 +62,8 @@ export default function RulesSheet({ categoryId, categoryName, entry, prize, sec
     ...(!puzzle && entry && entry <= challengeMaxEntry
       ? [{
           icon: Hourglass,
-          ur: `30 second mein muqabil na mila to Puzzle Challenge milega: ek puzzle, 100 second. Waqt par hal kiya to ${rs(prize)}, warna entry gayi.`,
-          en: `No opponent in 30s? You get a Puzzle Challenge: one puzzle, 100 seconds. Solve it in time to win ${rs(prize)}, otherwise you lose the entry.`,
+          ur: `30 second mein muqabil na mila to Puzzle Challenge milega: ek puzzle, 35–90 second (puzzle ke hisaab se). Waqt par hal kiya to ${rs(prize)}, warna entry gayi.`,
+          en: `No opponent in 30s? You get a Puzzle Challenge: one puzzle, 35-90 seconds depending on the puzzle. Solve it in time to win ${rs(prize)}, otherwise you lose the entry.`,
         }]
       : []),
     {

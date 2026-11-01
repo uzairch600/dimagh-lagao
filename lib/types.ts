@@ -28,7 +28,8 @@ export type Tier = { entry: number; prize: number };
 
 export type Config = {
   demoMode: boolean;
-  paymentsOpen: boolean; // false until the payment gateway is connected: paid matches show "jald aa rahe hain"
+  paymentsOpen: boolean;
+  puzzleSeconds: Record<string, number>; // the time of a puzzle match, per puzzle kind // false until the payment gateway is connected: paid matches show "jald aa rahe hain"
   categories: Category[];
   tiers: Tier[]; // quiz entries
   puzzleTiers: Tier[]; // puzzle entries (smaller)

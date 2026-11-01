@@ -53,7 +53,7 @@ export default function HowToPlay() {
             <p>
               App aap ko usi category aur usi entry wale kisi asli player se milaati hai. Start dabate hi entry fee kat jati hai aur
               lobby se wapsi nahi hoti. Agar <b>30 second</b> mein koi player na mile, to aap ko <b>Puzzle Challenge</b> milta hai: ek puzzle aur
-              100 second. Waqt par hal kiya to match ka poora inaam aap ka, warna entry gayi.
+              35–90 second (puzzle ke hisaab se). Waqt par hal kiya to match ka poora inaam aap ka, warna entry gayi.
             </p>
 
             <h2>5. Scoring</h2>
@@ -68,8 +68,8 @@ export default function HowToPlay() {
             <h2>Puzzles</h2>
             <p>
               Khelein mein Quiz ke saath 20 puzzles bhi hain — <b>Taaj</b>, <b>Sudoku</b>, <b>Lafz Dhoondo</b>, <b>Gend Tarteeb</b>,{" "}
-              <b>Hisaab Jor</b>, <b>Pipe Jor</b> aur bohat se aur. Puzzle akele khela jata hai — koi muqabil nahi: 1 puzzle, 100
-              second. Board poora sahi hote hi server check karta hai — waqt par hal kiya to inaam aap ka, warna entry gayi.
+              <b>Hisaab Jor</b>, <b>Pipe Jor</b> aur bohat se aur. Puzzle akele khela jata hai — koi muqabil nahi: 1 puzzle, 35–90
+              second (puzzle ke hisaab se). Board poora sahi hote hi server check karta hai — waqt par hal kiya to inaam aap ka, warna entry gayi.
               Free practice bhi hai. Har puzzle card par
               &quot;Kaise khelein&quot; dabayein: ek haath puzzle hal kar ke dikhata hai, phir aap chhote puzzle par khud practice kar
               sakte hain.

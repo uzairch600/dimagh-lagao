@@ -63,7 +63,7 @@ export default function Searching({ info, name, avatar, houseWaitSeconds, challe
           <Avatar name={name} avatar={avatar} size="xl" />
         </div>
         <h2>Puzzle tayyar ho raha hai…</h2>
-        <p className="muted">1 puzzle, 100 second — koi muqabil nahi, sirf aap aur ghari.</p>
+        <p className="muted">1 puzzle — koi muqabil nahi, sirf aap aur ghari.</p>
       </section>
     );
 
@@ -99,7 +99,7 @@ export default function Searching({ info, name, avatar, houseWaitSeconds, challe
               <>
                 <b>{left > 0 ? `${left} second mein player na mila…` : "Puzzle Challenge shuru ho raha hai"}</b>
                 <p>
-                  …to aap ko <b>Puzzle Challenge</b> milega: ek puzzle, 100 second. Waqt par hal kiya to{" "}
+                  …to aap ko <b>Puzzle Challenge</b> milega: ek puzzle, 35–90 second (puzzle ke hisaab se). Waqt par hal kiya to{" "}
                   <b>{rs(info.prize)}</b>, warna entry gayi.
                 </p>
               </>

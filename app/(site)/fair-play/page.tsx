@@ -39,10 +39,10 @@ export default function FairPlay() {
             <h2>Puzzle Challenge</h2>
             <p>
               Paid quiz hamesha do asli players ke beech hota hai — app kabhi computer ban kar aap ke khilaf nahi khelti. Agar 30
-              second mein koi muqabil na mile, to aap ko <b>Puzzle Challenge</b> milta hai: ek puzzle aur 100 second.
+              second mein koi muqabil na mile, to aap ko <b>Puzzle Challenge</b> milta hai: ek puzzle aur 35–90 second (puzzle ke hisaab se).
             </p>
             <ul>
-              <li>100 second ke andar puzzle sahi hal kiya to match ka poora inaam aap ka (inaam app deti hai).</li>
+              <li>Waqt ke andar puzzle sahi hal kiya to match ka poora inaam aap ka (inaam app deti hai).</li>
               <li>Waqt khatam aur puzzle hal nahi hua, to entry wapas nahi milti.</li>
               <li>Puzzle har player ke liye random chuna jata hai aur server khud check karta hai ke hal sahi hai.</li>
               <li>Match ke beech chale gaye aur 10 second mein wapas na aaye, to aap haar jate hain aur entry wapas nahi milti.</li>

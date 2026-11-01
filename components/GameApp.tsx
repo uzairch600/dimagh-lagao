@@ -284,7 +284,7 @@ export default function GameApp() {
         categoryName={category.name}
         entry={entry}
         prize={prize}
-        seconds={config!.seconds}
+        seconds={category.group === "puzzle" ? config!.puzzleSeconds[category.id] : config!.seconds}
         rake={config!.rake}
         challengeMaxEntry={config!.challengeMaxEntry}
         refundSeconds={config!.noOpponentRefundSeconds}

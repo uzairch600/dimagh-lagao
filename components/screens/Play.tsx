@@ -61,7 +61,7 @@ export default function Play({ config, onPick }: Props) {
         ))}
       </div>
 
-      <PuzzleSection puzzles={puzzles} onPick={onPick} />
+      <PuzzleSection puzzles={puzzles} seconds={config.puzzleSeconds} onPick={onPick} />
     </section>
   );
 }

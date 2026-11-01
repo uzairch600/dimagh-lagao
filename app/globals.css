@@ -1199,3 +1199,4 @@ img.site-logo-mark { padding: 0; object-fit: cover; }
 .number-warn b { color: #fff; }
 .number-agree { align-items: flex-start; text-align: left; font-size: 13.5px; }
 .number-agree input { margin-top: 1px; }
+.pz-time { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 11.5px; font-weight: 700; color: var(--gold); }

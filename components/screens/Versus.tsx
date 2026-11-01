@@ -30,7 +30,7 @@ export default function Versus({ found }: { found: MatchFound }) {
         <div className="vs-info">
           <p className="eyebrow">{found.category} • Puzzle Challenge</p>
           <div className="vs-prize">
-            {found.mode === "practice" ? "Practice — free, koi inaam nahi" : `100 second mein hal karein — inaam ${rs(found.prize)}`}
+            {found.mode === "practice" ? "Practice — free, koi inaam nahi" : `Waqt par hal karein — inaam ${rs(found.prize)}`}
           </div>
           <div className="countdown" key={n}>
             {n}

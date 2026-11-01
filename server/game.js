@@ -149,14 +149,9 @@ const BOT_SKILL = {
 };
 const isPaid = (mode) => mode === "paid" || mode === "challenge";
 
-// Every puzzle match is ONE puzzle with PUZZLE_SECONDS, played alone: the Puzzle Challenge (solved = the prize, paid
+// Every puzzle match is ONE puzzle with its own time (level 1 in server/puzzles.js), played alone: the Puzzle Challenge (solved = the prize, paid
 // by the platform; not solved = the entry stays with the platform). Quiz players with nobody to play in 30s get one too.
-// Level 1 of every kind is the tough board built for 100 seconds (server/puzzles.js).
-const PUZZLE_SECONDS = 100;
-async function puzzleMatchRound(kind) {
-  const q = await puzzleRound(kind, 1);
-  return { ...q, seconds: PUZZLE_SECONDS };
-}
+const puzzleMatchRound = (kind) => puzzleRound(kind, 1);
 // A puzzle category plays its own puzzle. A quiz player's fallback challenge gets a random kind, never the maze
 // (the quickest to solve, with the prize on it).
 function challengeRound(category) {

@@ -18,7 +18,8 @@ function Art({ kind }: { kind: PuzzleKind }) {
 }
 
 // The Puzzles half of Khelein: banner, then one card per puzzle with a "Kaise khelein" button.
-export default function PuzzleSection({ puzzles, onPick }: { puzzles: Category[]; onPick: (c: Category) => void }) {
+// seconds: each puzzle's match time, shown on its card
+export default function PuzzleSection({ puzzles, seconds, onPick }: { puzzles: Category[]; seconds: Record<string, number>; onPick: (c: Category) => void }) {
   const [demo, setDemo] = useState<Category | null>(null);
   const list = puzzles.filter((c) => isPuzzleKind(c.id));
 
@@ -31,7 +32,7 @@ export default function PuzzleSection({ puzzles, onPick }: { puzzles: Category[]
             <Timer size={26} /> Dimagh ki Race
           </h2>
           <p>
-            Aap aur ghari, koi muqabil nahi. <b>100 second mein puzzle hal karein, inaam jeetein.</b> {list.length} qisam ke puzzle.
+            Aap aur ghari, koi muqabil nahi. <b>Ghari se tez puzzle hal karein, inaam jeetein.</b> {list.length} qisam ke puzzle.
           </p>
           <div className="pz-banner-chips">
             <span className="pz-banner-chip">
@@ -67,6 +68,11 @@ export default function PuzzleSection({ puzzles, onPick }: { puzzles: Category[]
               <span className="cat2-body">
                 <b>{c.name}</b>
                 <small>{PUZZLES[kind].blurb}</small>
+                {seconds[kind] && (
+                  <span className="pz-time">
+                    <Timer size={12} /> {seconds[kind]} second
+                  </span>
+                )}
               </span>
               <span className="pz-card-foot">
                 <button
