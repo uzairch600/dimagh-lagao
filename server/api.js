@@ -31,10 +31,29 @@ function pinMatches(pin, stored) {
 }
 
 // Accepts 03xxxxxxxxx, +923xxxxxxxxx, 923xxxxxxxxx -> 03xxxxxxxxx
+// Pakistani mobile numbers only: 030x-034x and 0355, and not an obvious fake like 0300-0000000 or 0300-1234567.
 function normalizePhone(raw) {
   const digits = String(raw || "").replace(/\D/g, "");
   const local = digits.startsWith("92") ? "0" + digits.slice(2) : digits;
-  return /^03\d{9}$/.test(local) ? local : null;
+  if (!/^03([0-4]\d|55)\d{7}$/.test(local)) return null;
+  const tail = local.slice(4);
+  if (/^(\d)\1{6}$/.test(tail) || tail === "1234567" || tail === "7654321") return null;
+  return local;
+}
+
+// The visitor's own IP. Render sits behind Cloudflare, so req.ip is the proxy; Cloudflare puts the real one here.
+const clientIp = (req) => String(req.headers["cf-connecting-ip"] || req.ip);
+
+// New accounts per network: stops a script from filling the database with made-up numbers. Generous, because many
+// phones on a Pakistani mobile network share one IP.
+const SIGNUPS_PER_HOUR = 10;
+const SIGNUPS_PER_DAY = 30;
+const signupTimes = new Map();
+function signupAllowed(ip) {
+  const now = Date.now();
+  const recent = (signupTimes.get(ip) || []).filter((t) => now - t < 24 * 3600_000);
+  signupTimes.set(ip, recent);
+  return recent.filter((t) => now - t < 3600_000).length < SIGNUPS_PER_HOUR && recent.length < SIGNUPS_PER_DAY;
 }
 
 const cleanName = (s) => String(s || "").replace(/[<>]/g, "").trim().slice(0, 18);
@@ -89,6 +108,8 @@ app.post("/api/login", (req, res) => {
   } else {
     const name = cleanName(req.body.name);
     if (name.length < 2) return res.status(400).json({ error: "Apna naam likhein", needName: true });
+    if (!signupAllowed(clientIp(req))) return res.status(429).json({ error: "Is network se abhi bohat naye account ban chuke — thori der baad try karein" });
+    signupTimes.get(clientIp(req)).push(Date.now());
     user = db.createUser({ name, phone, avatar: AVATARS[crypto.randomInt(AVATARS.length)], pinHash: hashPin(pin) });
   }
   loginAttempts.delete(phone);
@@ -151,9 +172,9 @@ app.post("/api/contact", (req, res) => {
   if (name.length < 2) return res.status(400).json({ error: "Apna naam likhein" });
   if (!phone) return res.status(400).json({ error: "Sahi mobile number likhein (03xx-xxxxxxx)" });
   if (message.length < 10) return res.status(400).json({ error: "Message thora tafseel se likhein" });
-  const last = contactTimes.get(req.ip) || 0;
+  const last = contactTimes.get(clientIp(req)) || 0;
   if (Date.now() - last < 60_000) return res.status(429).json({ error: "Thori der baad dobara bhejein" });
-  contactTimes.set(req.ip, Date.now());
+  contactTimes.set(clientIp(req), Date.now());
   db.saveMessage({ name, phone, topic, message });
   res.json({ ok: true });
 });
