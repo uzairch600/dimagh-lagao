@@ -59,6 +59,7 @@ export default function Landing() {
                 Kaise khelein?
               </Link>
             </div>
+            <LiveStrip hero />
             <ul className="hero-points">
               <li><ShieldCheck size={16} /> Skill game — qismat nahi</li>
               <li><Clock size={16} /> 2 minute ka match</li>
@@ -75,9 +76,6 @@ export default function Landing() {
               <Bot size={18} /> <span>30s mein player na mile to <b>Puzzle Challenge</b></span>
             </div>
           </div>
-        </div>
-        <div className="site-container">
-          <LiveStrip />
         </div>
       </section>
 

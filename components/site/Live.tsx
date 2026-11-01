@@ -49,7 +49,8 @@ const prelaunch = (
   </div>
 );
 
-export function LiveStrip() {
+// hero: the compact version that sits under the hero buttons (one row on phones too)
+export function LiveStrip({ hero = false }: { hero?: boolean }) {
   const live = useLive();
   if (live === "off") return null;
   const items = [
@@ -58,7 +59,7 @@ export function LiveStrip() {
     { icon: Activity, value: live ? rs(live.paidToday) : "—", label: "Aaj ke inaam" },
   ];
   return (
-    <div className="live-strip">
+    <div className={`live-strip ${hero ? "hero-live" : ""}`}>
       <span className="live-strip-tag">
         <span className="live-dot" /> LIVE
       </span>
