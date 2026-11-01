@@ -4,9 +4,9 @@ services:
   - type: web
     name: dimagh-lagao
     runtime: node
-    # starter stays awake. The free plan sleeps after 15 idle minutes, which drops live matches and makes the
-    # next visitor wait about a minute.
-    plan: starter
+    # Free until the payment API is approved. A free service sleeps after 15 idle minutes, so an outside uptime
+    # monitor pings /api/config every 10 minutes to keep it awake (one always-on service fits the free 750 h/month).
+    plan: free
     region: singapore # closest Render region to Pakistan
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
