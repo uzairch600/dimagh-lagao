@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowDownLeft, Banknote, Gamepad2, Plus, Trophy, Undo2, type LucideIcon } from "lucide-react";
+import { ArrowDownLeft, Banknote, Clock, Gamepad2, Plus, Trophy, Undo2, type LucideIcon } from "lucide-react";
 import { api, rs } from "@/lib/api";
 import type { Config, Transaction, User, Withdrawal } from "@/lib/types";
 
@@ -55,7 +55,7 @@ export default function Wallet({ user, config, setSheet, notify, refreshMe }: Pr
         <small>Kul balance</small>
         <div className="wallet-amount">{rs(user.balance)}</div>
         <div className="wallet-actions">
-          <button className="btn btn-light" onClick={() => setSheet(<DepositSheet demo={config.demoMode} notify={notify} onDone={done} />)}>
+          <button className="btn btn-light" onClick={() => setSheet(<DepositSheet demo={config.demoMode} open={config.paymentsOpen} notify={notify} onDone={done} />)}>
             <Plus size={18} strokeWidth={3} /> Paise daalein
           </button>
           <button
@@ -67,6 +67,11 @@ export default function Wallet({ user, config, setSheet, notify, refreshMe }: Pr
         </div>
         {config.demoMode && <span className="demo-badge">DEMO MODE</span>}
       </div>
+      {!config.paymentsOpen && (
+        <p className="soon-note">
+          <Clock size={16} /> Easypaisa aur JazzCash se paise daalna jald shuru ho raha hai. Tab tak free practice khelein.
+        </p>
+      )}
 
       <h3 className="section-sub">History</h3>
       <div className="tx-list">
@@ -100,7 +105,7 @@ export default function Wallet({ user, config, setSheet, notify, refreshMe }: Pr
   );
 }
 
-function DepositSheet({ demo, notify, onDone }: { demo: boolean; notify: Notify; onDone: (m: string) => void }) {
+function DepositSheet({ demo, open, notify, onDone }: { demo: boolean; open: boolean; notify: Notify; onDone: (m: string) => void }) {
   const [amount, setAmount] = useState(500);
   const [busy, setBusy] = useState(false);
   const submit = async () => {
@@ -114,6 +119,15 @@ function DepositSheet({ demo, notify, onDone }: { demo: boolean; notify: Notify;
       setBusy(false);
     }
   };
+  if (!open)
+    return (
+      <>
+        <h3>Paise daalein</h3>
+        <p className="soon-note">
+          <Clock size={16} /> Easypaisa aur JazzCash jald aa rahe hain. Tab tak saare quiz aur puzzles free practice mein khelein.
+        </p>
+      </>
+    );
   return (
     <>
       <h3>Paise daalein</h3>

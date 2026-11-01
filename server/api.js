@@ -8,6 +8,9 @@ import { CATEGORIES, aiStatus, poolStats, warmUp } from "./questions.js";
 
 // Demo mode: "Add money" just credits the wallet so the game can be tested without a payment gateway.
 const DEMO_MODE = process.env.DEMO_MODE !== "false";
+// Deposits work only in demo mode until the payment gateway (Easypaisa / JazzCash) is connected. While closed, the
+// app says paid matches are coming soon and points players to free practice.
+const PAYMENTS_OPEN = DEMO_MODE;
 const MIN_WITHDRAW = 200;
 // Avatar = one of the illustrated animals drawn by components/Avatar.tsx.
 const AVATARS = ["fox", "cat", "owl", "bear", "bunny", "penguin", "tiger", "lion"];
@@ -46,6 +49,7 @@ function auth(req, res, next) {
 
 const config = () => ({
   demoMode: DEMO_MODE,
+  paymentsOpen: PAYMENTS_OPEN,
   categories: CATEGORIES,
   tiers: game.ENTRY_TIERS.map((entry) => ({ entry, prize: game.prizeFor(entry) })),
   puzzleTiers: game.PUZZLE_TIERS.map((entry) => ({ entry, prize: game.prizeFor(entry) })),
@@ -117,7 +121,7 @@ app.get("/api/wallet", auth, (req, res) => {
 });
 
 app.post("/api/wallet/deposit", auth, (req, res) => {
-  if (!DEMO_MODE) return res.status(400).json({ error: "Payment gateway abhi connect nahi hua" });
+  if (!PAYMENTS_OPEN) return res.status(400).json({ error: "Paid matches jald aa rahe hain — abhi free practice khelein" });
   const amount = Number(req.body.amount);
   if (![100, 250, 500, 1000].includes(amount)) return res.status(400).json({ error: "Ghalat amount" });
   if (req.user.balance + amount > 10_000) return res.status(400).json({ error: "Demo wallet ki hadd Rs 10,000 hai" });

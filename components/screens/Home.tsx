@@ -1,4 +1,4 @@
-import { Gamepad2, Plus, Timer, Trophy, Zap } from "lucide-react";
+import { Clock, Gamepad2, Plus, Timer, Trophy, Zap } from "lucide-react";
 import { rs } from "@/lib/api";
 import type { Config, Screen, User } from "@/lib/types";
 import Avatar from "../Avatar";
@@ -33,15 +33,27 @@ export default function Home({ user, config, go }: Props) {
 
       <div className="home-hero">
         <div className="home-hero-copy">
-          <span className="tag">LIVE 1v1</span>
+          <span className="tag">{config.paymentsOpen ? "LIVE 1v1" : "FREE PRACTICE"}</span>
           <h2>
             Aaj kis ko <span className="gold">harana</span> hai?
           </h2>
-          <p>Category chunein, muqabil se milein, aur {rs(maxPrize)} tak jeetein.</p>
+          {config.paymentsOpen ? (
+            <p>Category chunein, muqabil se milein, aur {rs(maxPrize)} tak jeetein.</p>
+          ) : (
+            // until the payment gateway is connected: say so plainly, so nobody thinks the site is broken
+            <p>
+              <b>Paid matches jald aa rahe hain</b> — tab {rs(maxPrize)} tak jeet sakenge. Abhi free practice khelein aur dimagh tez
+              karein.
+            </p>
+          )}
           <div className="home-hero-chips">
             <span><Zap size={14} /> {config.questions} sawal</span>
             <span><Timer size={14} /> {config.seconds} sec har sawal</span>
-            <span><Trophy size={14} /> {rs(maxPrize)} tak</span>
+            {config.paymentsOpen ? (
+              <span><Trophy size={14} /> {rs(maxPrize)} tak</span>
+            ) : (
+              <span><Clock size={14} /> Paid matches: jald</span>
+            )}
           </div>
         </div>
         <img className="home-hero-art" src="/images/hero.webp" alt="" width={1408} height={768} />
