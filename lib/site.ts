@@ -4,7 +4,6 @@ export const SITE = {
   domain: "dimaghlagao.com",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://dimaghlagao.com",
   tagline: "Dimagh lagao, champion bano",
-  email: "muhammaduzair.web@gmail.com", // switch to support@dimaghlagao.com once that mailbox exists
   whatsapp: "", // e.g. "+92 300 0000000" — leave empty to hide
   city: "Pakistan",
   minAge: 18,

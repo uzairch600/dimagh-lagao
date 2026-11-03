@@ -71,8 +71,8 @@ export default function Privacy() {
 
           <h2>8. Your rights</h2>
           <p>
-            You can ask us for a copy of your data, to correct it, or to close your account. Contact us at{" "}
-            <a href={`mailto:${SITE.email}`}>{SITE.email}</a>.
+            You can ask us for a copy of your data, to correct it, or to close your account through the{" "}
+            <Link href="/contact">contact page</Link>.
           </p>
 
           <h2>9. Browser storage</h2>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { FOOTER, SITE } from "@/lib/site";
 import { Logo } from "./SiteHeader";
 
@@ -11,9 +11,6 @@ export default function SiteFooter() {
           <div className="footer-brand">
             <Logo />
             <p>Pakistan ka 1v1 skill quiz game. Sahi aur tez jawab do, muqabla jeeto.</p>
-            <a href={`mailto:${SITE.email}`} className="footer-contact">
-              <Mail size={16} /> {SITE.email}
-            </a>
           </div>
           {FOOTER.map((g) => (
             <div key={g.title} className="footer-col">

@@ -1,5 +1,4 @@
-// Hand-checked starter questions so the game works even before the AI has
-// generated anything (or when no API key is set).
+// Hand-checked starter questions, merged into the stored question pool.
 // Format: [question, correct answer, [3 wrong answers]]
 
 export const SEED = {

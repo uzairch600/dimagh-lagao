@@ -7,8 +7,6 @@ import * as G from "./puzzles/grids.js";
 import * as L from "./puzzles/lines.js";
 import * as M from "./puzzles/moves.js";
 
-export const PUZZLES_PER_MATCH = 3;
-
 // In the order they appear on the Khelein screen (easiest to pick up first).
 // demo: a tiny board for the "how to play" walkthrough.
 // levels: [easier, MATCH, harder]. A match is one board at level 1, with level 1's own time (35-90 s, kept tight so

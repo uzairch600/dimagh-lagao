@@ -4,7 +4,7 @@ import express from "express";
 import { Server } from "socket.io";
 import * as db from "./db.js";
 import * as game from "./game.js";
-import { CATEGORIES, aiStatus, poolStats, warmUp } from "./questions.js";
+import { CATEGORIES, poolStats } from "./questions.js";
 import { PUZZLE_SECONDS } from "./puzzles.js";
 
 // Avatar = one of the illustrated animals drawn by components/Avatar.tsx.
@@ -187,7 +187,5 @@ export function attachRealtime(httpServer) {
 }
 
 export function startBackground() {
-  console.log(`  AI questions: ${aiStatus()}`);
   console.log("  Question pool:", poolStats(), "\n");
-  warmUp();
 }

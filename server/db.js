@@ -194,10 +194,3 @@ export function flag(entry) {
   save("flags", f);
   return f;
 }
-
-// Every question id any player has ever been shown (to retire them globally).
-export function allSeenIds() {
-  const ids = new Set();
-  for (const u of Object.values(data.users)) for (const id of u.seen || []) ids.add(id);
-  return ids;
-}

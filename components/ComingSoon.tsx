@@ -24,7 +24,7 @@ export default function ComingSoon() {
           Game jald <span className="gold">live</span> ho rahi hai
         </h1>
         <p className="muted">
-          {SITE.name} ki 1v1 quiz battles payment setup mukammal hote hi shuru ho jayengi. Tab tak dekhiye kaise khelna hai
+          {SITE.name} ki free 1v1 quiz battles jald shuru ho rahi hain. Tab tak dekhiye kaise khelna hai
           aur kaunsi categories hongi.
         </p>
         <div className="cs-cats">
@@ -43,9 +43,6 @@ export default function ComingSoon() {
             <ArrowLeft size={18} /> Website
           </Link>
         </div>
-        <p className="fine">
-          Sawal? <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
-        </p>
       </section>
     </main>
   );

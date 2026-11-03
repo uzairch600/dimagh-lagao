@@ -37,5 +37,3 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
   if (!res.ok) throw new ApiError(data.error || "Kuch ghalat ho gaya", res.status, data);
   return data as T;
 }
-
-export const rs = (n: number) => "Rs " + n.toLocaleString("en-PK");

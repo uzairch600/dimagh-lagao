@@ -116,7 +116,7 @@ function startMatch({ mode, category, a, b }) {
   }
 
   const want = puzzle ? 1 : QUESTIONS_PER_MATCH;
-  (puzzle ? puzzleRound(category, 1).then((q) => [q]) : questionsForMatch(category, want, Infinity, { free: true }))
+  (puzzle ? puzzleRound(category, 1).then((q) => [q]) : Promise.resolve(questionsForMatch(category, want)))
     .catch((err) => {
       console.error("[game] could not prepare questions:", err);
       return [];

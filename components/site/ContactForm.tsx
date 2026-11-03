@@ -3,52 +3,36 @@
 import { useState } from "react";
 import { CheckCircle2, Send } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
-import { GAME_LIVE, SITE } from "@/lib/site";
+import { GAME_LIVE } from "@/lib/site";
 
 export default function ContactForm() {
   const [form, setForm] = useState({ name: "", phone: "", topic: "general", message: "" });
-  const [state, setState] = useState<"idle" | "busy" | "sent" | "mailed">("idle");
+  const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
   const [error, setError] = useState("");
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm({ ...form, [k]: e.target.value });
 
-  // Without the game server there is no /api/contact, so hand the message to the visitor's email app.
-  const sendByEmail = () => {
-    const subject = `[${form.topic}] Message from ${form.name}`;
-    const body = `${form.message}\n\nName: ${form.name}\nMobile: ${form.phone}`;
-    window.location.href = `mailto:${SITE.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setState("mailed");
-  };
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!GAME_LIVE) return sendByEmail();
+    if (!GAME_LIVE) return setError("Abhi message nahi bhej sakte — thori der baad try karein.");
     setState("busy");
     setError("");
     try {
       await api("/api/contact", form);
       setState("sent");
     } catch (err) {
-      if (err instanceof ApiError && err.status === 400) {
-        setError(err.message);
-        setState("idle");
-      } else {
-        sendByEmail();
-      }
+      setError(err instanceof ApiError ? err.message : "Message nahi gaya — thori der baad try karein.");
+      setState("idle");
     }
   };
 
-  if (state === "sent" || state === "mailed")
+  if (state === "sent")
     return (
       <div className="contact-done">
         <CheckCircle2 size={40} />
-        <h3>{state === "sent" ? "Message mil gaya!" : "Email tayyar hai"}</h3>
-        <p>
-          {state === "sent"
-            ? "Hum jald aap se rabta karenge."
-            : `Aap ki email app mein message tayyar hai — bas Send dabayein. Email app na khule to ${SITE.email} par likhein.`}
-        </p>
+        <h3>Message mil gaya!</h3>
+        <p>Hum jald aap se rabta karenge.</p>
       </div>
     );
 

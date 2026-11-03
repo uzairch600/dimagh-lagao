@@ -1,10 +1,10 @@
 # Render Blueprint: Render > New > Blueprint > pick this repo. Creates the live web service.
-# Secrets (DATABASE_URL, ANTHROPIC_API_KEY) are not in this file: Render asks for them when the Blueprint is applied.
+# The secret DATABASE_URL is not in this file: Render asks for it when the Blueprint is applied.
 services:
   - type: web
     name: dimagh-lagao
     runtime: node
-    # Free until the payment API is approved. A free service sleeps after 15 idle minutes, so an outside uptime
+    # A free service sleeps after 15 idle minutes, so an outside uptime
     # monitor pings /api/config every 10 minutes to keep it awake (one always-on service fits the free 750 h/month).
     plan: free
     region: singapore # closest Render region to Pakistan
@@ -14,11 +14,5 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
-      - key: DEMO_MODE # live: real game, no fake money
-        value: "false"
-      - key: AI_DAILY_COST_CAP_USD
-        value: "1"
       - key: DATABASE_URL
-        sync: false
-      - key: ANTHROPIC_API_KEY
         sync: false

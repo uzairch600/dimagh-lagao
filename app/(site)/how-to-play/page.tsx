@@ -18,8 +18,7 @@ export default function HowToPlay() {
             <h2>1. Account banayein</h2>
             <p>
               <Link href="/play">Play</Link> page par apna mobile number likhein, naam aur 4-digit PIN banayein. Bas. Agli baar
-              isi number aur PIN se login karein. Ek insaan sirf ek account bana sakta hai. Sirf apna wohi number likhein jis par
-              aap ka Easypaisa ya JazzCash hai — sponsor muqablon ka inaam isi number par bheja jayega.
+              isi number aur PIN se login karein. Ek insaan sirf ek account bana sakta hai.
             </p>
 
             <h2>2. Category chunein</h2>

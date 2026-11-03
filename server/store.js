@@ -23,7 +23,7 @@ export async function init() {
       "create table if not exists app.questions (id text primary key, category text not null, data jsonb not null, created_at timestamptz not null default now())",
       "alter table app.questions enable row level security",
       "create index if not exists questions_category on app.questions (category)",
-      // A question may exist only once (by normalised text) across ALL categories, and is retired once used.
+      // A question may exist only once (by normalised text) across ALL categories.
       "alter table app.questions add column if not exists norm text",
       "alter table app.questions add column if not exists used_at timestamptz",
       "update app.questions set norm = trim(regexp_replace(lower(data->>'q'), '[^a-z0-9]+', ' ', 'g')) where norm is null",
@@ -70,16 +70,10 @@ export async function flush() {
 }
 
 export async function loadQuestions() {
-  const r = await pool.query("select category, data, used_at from app.questions");
+  const r = await pool.query("select category, data from app.questions");
   const out = {};
-  for (const { category, data, used_at } of r.rows) (out[category] ||= []).push({ ...data, used: !!used_at });
+  for (const { category, data } of r.rows) (out[category] ||= []).push(data);
   return out;
-}
-
-// Retire questions forever once they have been shown in a match.
-export async function markQuestionsUsed(ids) {
-  if (!ids.length) return;
-  await pool.query("update app.questions set used_at = coalesce(used_at, now()) where id = any($1)", [ids]);
 }
 
 export const normText = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();

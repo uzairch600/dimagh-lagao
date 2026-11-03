@@ -98,8 +98,7 @@ export default function Terms() {
 
           <h2>12. Contact</h2>
           <p>
-            Questions about these Terms, or interested in sponsoring a contest: <a href={`mailto:${SITE.email}`}>{SITE.email}</a>{" "}
-            or the <Link href="/contact">contact page</Link>.
+            Questions about these Terms, or interested in sponsoring a contest: use the <Link href="/contact">contact page</Link>.
           </p>
         </div>
       </section>
